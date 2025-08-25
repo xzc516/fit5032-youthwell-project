@@ -1,11 +1,59 @@
-<script setup></script>
-
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <div id="app">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="#" @click.prevent="$router.push('/forum')">
+          <strong>YouthWell</strong>
+        </a>
+        <div class="navbar-nav ms-auto">
+          <a class="nav-link" href="#" @click.prevent="$router.push('/forum')" :class="{ active: $route.path === '/forum' }">
+            Forum
+          </a>
+          <a class="nav-link" href="#" @click.prevent="$router.push('/map')" :class="{ active: $route.path === '/map' }">
+            Map
+          </a>
+        </div>
+      </div>
+    </nav>
+    <main class="container mt-4">
+      <router-view />
+    </main>
+  </div>
 </template>
 
-<style scoped></style>
+<script setup>
+</script>
+
+<style>
+#app {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.navbar {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.nav-link {
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: #fff !important;
+}
+
+.nav-link.active {
+  color: #fff !important;
+  font-weight: bold;
+}
+
+main {
+  min-height: calc(100vh - 80px);
+}
+</style>
