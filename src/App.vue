@@ -6,12 +6,16 @@
           <strong>YouthWell</strong>
         </a>
         <div class="navbar-nav ms-auto">
+          <a class="nav-link" href="#" @click.prevent="$router.push('/login')" v-if="!auth.currentUser" :class="{ active: $route.path === '/login' }">Login</a>
+          <a class="nav-link" href="#" @click.prevent="$router.push('/register')" v-if="!auth.currentUser" :class="{ active: $route.path === '/register' }">Register</a>
           <a class="nav-link" href="#" @click.prevent="$router.push('/forum')" :class="{ active: $route.path === '/forum' }">
             Forum
           </a>
           <a class="nav-link" href="#" @click.prevent="$router.push('/map')" :class="{ active: $route.path === '/map' }">
             Map
           </a>
+          <span class="navbar-text ms-3" v-if="auth.currentUser">Hello, {{ auth.currentUser.username }} ({{ auth.currentUser.role }})</span>
+          <a class="nav-link ms-2" v-if="auth.currentUser" href="#" @click.prevent="logout">Logout</a>
         </div>
       </div>
     </nav>
@@ -22,6 +26,14 @@
 </template>
 
 <script setup>
+import { useAuthStore } from './stores/auth'
+const auth = useAuthStore()
+auth.load()
+
+function logout() {
+  auth.logout()
+  window.location.assign('/login')
+}
 </script>
 
 <style>
