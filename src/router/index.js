@@ -1,33 +1,65 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-
-const ForumView = () => import('../views/ForumView.vue')
-const MapView = () => import('../views/MapView.vue')
-const LoginView = () => import('../views/LoginView.vue')
-const RegisterView = () => import('../views/RegisterView.vue')
+import ForumView from '../views/ForumView.vue'
+import LoginView from '../views/LoginView.vue'
+import MapView from '../views/MapView.vue'
+import RegisterView from '../views/RegisterView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/forum' },
-    { path: '/login', name: 'login', component: LoginView },
-    { path: '/register', name: 'register', component: RegisterView },
-    { path: '/forum', name: 'forum', component: ForumView, meta: { requiresAuth: true, roles: ['user', 'admin'] } },
-    { path: '/map', name: 'map', component: MapView, meta: { requiresAuth: true, roles: ['user', 'admin'] } },
-  ],
+    {
+      path: '/',
+      redirect: '/forum'
+    },
+    {
+      path: '/forum',
+      name: 'forum',
+      component: ForumView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/map',
+      name: 'map',
+      component: MapView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterView
+    }
+  ]
 })
 
+// Route guards - implement role-based access control
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
-  auth.load()
-  if (to.meta?.requiresAuth) {
-    if (!auth.currentUser) {
-      return next({ name: 'login' })
-    }
-    if (to.meta.roles && !to.meta.roles.includes(auth.currentUser.role)) {
-      return next({ name: 'forum' })
+  
+  // If page requires authentication
+  if (to.meta.requiresAuth) {
+    // Check if user is logged in
+    if (!auth.isAuthenticated()) {
+      // Save the page user wanted to access
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      })
+      return
     }
   }
+  
+  // If user is logged in but tries to access login/register pages, redirect to forum
+  if (auth.isAuthenticated() && (to.path === '/login' || to.path === '/register')) {
+    next('/forum')
+    return
+  }
+  
   next()
 })
 

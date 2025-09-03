@@ -146,67 +146,206 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import { useAuthStore } from '../stores/auth'
 
+const auth = useAuthStore()
 const posts = ref([])
 const form = ref({ title: '', summary: '', rating: 3 })
 const errors = ref({ title: '', summary: '', rating: '' })
 const selectedPost = ref(null)
 const postModal = ref(null)
 
+// Content sanitization function - prevents XSS attacks
+function sanitizeContent(content) {
+  if (typeof content !== 'string') return ''
+  
+  // Remove all HTML tags
+  let sanitized = content.replace(/<[^>]*>/g, '')
+  
+  // Escape special characters
+  sanitized = sanitized
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/\//g, '&#x2F;')
+  
+  return sanitized.trim()
+}
+
+// Enhanced input validation
+function validateInput(input, type) {
+  switch (type) {
+    case 'title':
+      if (!input || input.trim().length === 0) {
+        return 'Title is required'
+      }
+      if (input.trim().length < 3) {
+        return 'Title must be at least 3 characters long'
+      }
+      if (input.trim().length > 50) {
+        return 'Title must be no more than 50 characters long'
+      }
+      // Check for malicious content
+      if (/script|javascript|on\w+\s*=|<|>/.test(input.toLowerCase())) {
+        return 'Title contains invalid characters'
+      }
+      return ''
+      
+    case 'summary':
+      if (!input || input.trim().length === 0) {
+        return 'Content is required'
+      }
+      if (input.trim().length < 10) {
+        return 'Content must be at least 10 characters long'
+      }
+      if (input.trim().length > 1000) {
+        return 'Content must be no more than 1000 characters long'
+      }
+      // Check for malicious content
+      if (/script|javascript|on\w+\s*=|<|>/.test(input.toLowerCase())) {
+        return 'Content contains invalid characters'
+      }
+      return ''
+      
+    case 'rating':
+      const rating = parseInt(input)
+      if (isNaN(rating) || rating < 1 || rating > 5) {
+        return 'Rating must be a number between 1 and 5'
+      }
+      return ''
+  }
+  return ''
+}
+
 onMounted(() => {
-  const saved = localStorage.getItem('forum-posts')
-  posts.value = saved ? JSON.parse(saved) : [
-    { id: 1, title: 'How to Deal with Exam Anxiety?', summary: 'Share practical methods and breathing exercises to help manage stress during exam periods.', rating: 4 },
-    { id: 2, title: 'University Social Skills', summary: 'Tips on building connections and support networks in new environments.', rating: 3 },
-  ]
+  try {
+    const saved = localStorage.getItem('forum-posts')
+    if (saved) {
+      const parsedPosts = JSON.parse(saved)
+      // Validate and sanitize loaded data
+      if (Array.isArray(parsedPosts)) {
+        posts.value = parsedPosts.map(post => ({
+          id: post.id || Date.now(),
+          title: sanitizeContent(post.title || ''),
+          summary: sanitizeContent(post.summary || ''),
+          rating: Math.max(1, Math.min(5, parseInt(post.rating) || 3)),
+          author: sanitizeContent(post.author || 'Anonymous'),
+          timestamp: post.timestamp || Date.now()
+        }))
+      }
+    } else {
+      // Default posts
+      posts.value = [
+        { 
+          id: 1, 
+          title: 'How to Deal with Exam Anxiety?', 
+          summary: 'Share practical methods and breathing exercises to help manage stress during exam periods.', 
+          rating: 4,
+          author: 'Anonymous',
+          timestamp: Date.now()
+        },
+        { 
+          id: 2, 
+          title: 'University Social Skills', 
+          summary: 'Tips on building connections and support networks in new environments.', 
+          rating: 3,
+          author: 'Anonymous',
+          timestamp: Date.now()
+        },
+      ]
+    }
+  } catch (error) {
+    console.error('Error loading forum posts:', error)
+    // If data is corrupted, use default data
+    posts.value = [
+      { 
+        id: 1, 
+        title: 'How to Deal with Exam Anxiety?', 
+        summary: 'Share practical methods and breathing exercises to help manage stress during exam periods.', 
+        rating: 4,
+        author: 'Anonymous',
+        timestamp: Date.now()
+      }
+    ]
+  }
 })
 
 watch(posts, (val) => {
-  localStorage.setItem('forum-posts', JSON.stringify(val))
+  try {
+    localStorage.setItem('forum-posts', JSON.stringify(val))
+  } catch (error) {
+    console.error('Error saving forum posts:', error)
+  }
 }, { deep: true })
 
 function ratePost(id, value) {
-  const target = posts.value.find(p => p.id === id)
-  if (!target) return
-  target.rating = value
+  try {
+    const target = posts.value.find(p => p.id === id)
+    if (!target) return
+    
+    // Validate rating value
+    const validRating = Math.max(1, Math.min(5, parseInt(value) || 1))
+    target.rating = validRating
+  } catch (error) {
+    console.error('Error rating post:', error)
+  }
 }
 
 function validate() {
   errors.value = { title: '', summary: '', rating: '' }
-  // Validation 1: Required + Length (title)
-  if (!form.value.title) {
-    errors.value.title = 'Title is required'
-  } else if (form.value.title.length < 3 || form.value.title.length > 50) {
-    errors.value.title = 'Title must be between 3-50 characters'
-  }
-  // Validation 2: Minimum length (content)
-  if (!form.value.summary || form.value.summary.length < 10) {
-    errors.value.summary = 'Content must be at least 10 characters'
-  }
-  // Validation 3: Numeric range (rating)
-  if (isNaN(form.value.rating) || form.value.rating < 1 || form.value.rating > 5) {
-    errors.value.rating = 'Rating must be between 1-5'
-  }
+  
+  // Validate title
+  errors.value.title = validateInput(form.value.title, 'title')
+  
+  // Validate content
+  errors.value.summary = validateInput(form.value.summary, 'summary')
+  
+  // Validate rating
+  errors.value.rating = validateInput(form.value.rating, 'rating')
+  
   return !errors.value.title && !errors.value.summary && !errors.value.rating
 }
 
 function submitPost() {
   if (!validate()) return
-  const newPost = {
-    id: Date.now(),
-    title: form.value.title,
-    summary: form.value.summary,
-    rating: form.value.rating,
+  
+  try {
+    const newPost = {
+      id: Date.now(),
+      title: sanitizeContent(form.value.title),
+      summary: sanitizeContent(form.value.summary),
+      rating: parseInt(form.value.rating),
+      author: auth.currentUser?.username || 'Anonymous',
+      timestamp: Date.now()
+    }
+    
+    posts.value = [newPost, ...posts.value]
+    form.value = { title: '', summary: '', rating: 3 }
+    
+    // Show success message
+    alert('Post published successfully!')
+  } catch (error) {
+    console.error('Error submitting post:', error)
+    alert('Error publishing post. Please try again.')
   }
-  posts.value = [newPost, ...posts.value]
-  form.value = { title: '', summary: '', rating: 3 }
 }
 
 function openPost(post) {
-  selectedPost.value = post
-  // Use Bootstrap modal
-  const modal = new bootstrap.Modal(postModal.value)
-  modal.show()
+  try {
+    selectedPost.value = {
+      ...post,
+      title: sanitizeContent(post.title),
+      summary: sanitizeContent(post.summary)
+    }
+    
+    // Use Bootstrap modal
+    const modal = new bootstrap.Modal(postModal.value)
+    modal.show()
+  } catch (error) {
+    console.error('Error opening post:', error)
+  }
 }
 </script>
 

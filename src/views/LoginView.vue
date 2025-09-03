@@ -36,18 +36,60 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 
-onMounted(() => { auth.load(); auth.ensureAdminSeed() })
+// Input validation function
+function validateInput() {
+  error.value = ''
+  
+  if (!username.value.trim()) {
+    error.value = 'Username is required'
+    return false
+  }
+  
+  if (!password.value) {
+    error.value = 'Password is required'
+    return false
+  }
+  
+  // Check username length
+  if (username.value.trim().length < 3) {
+    error.value = 'Username must be at least 3 characters long'
+    return false
+  }
+  
+  // Check password length
+  if (password.value.length < 6) {
+    error.value = 'Password must be at least 6 characters long'
+    return false
+  }
+  
+  return true
+}
+
+onMounted(() => { 
+  auth.load(); 
+  auth.ensureAdminSeed() 
+})
 
 function onSubmit() {
-  error.value = ''
+  if (!validateInput()) return
+  
   try {
     auth.login({ username: username.value, password: password.value })
+    
     if (auth.currentUser?.role === 'admin') {
       window.alert('Logged in as admin')
     }
-    history.state?.from ?  
-      window.location.assign(history.state.from) : 
+    
+    // Check for redirect parameter
+    const urlParams = new URLSearchParams(window.location.search)
+    const redirect = urlParams.get('redirect')
+    
+    // Redirect to previous page or forum
+    if (redirect && redirect !== '/login' && redirect !== '/register') {
+      window.location.assign(redirect)
+    } else {
       window.location.assign('/forum')
+    }
   } catch (e) {
     error.value = e.message || 'Login failed'
   }
