@@ -16,13 +16,13 @@ const router = createRouter({
       path: '/forum',
       name: 'forum',
       component: ForumView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, roles: ['user', 'admin'] }
     },
     {
       path: '/map',
       name: 'map',
       component: MapView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, roles: ['admin'] }
     },
     {
       path: '/login',
@@ -51,6 +51,16 @@ router.beforeEach((to, from, next) => {
         query: { redirect: to.fullPath }
       })
       return
+    }
+
+    // If route specifies roles, enforce role-based access
+    if (Array.isArray(to.meta.roles) && to.meta.roles.length > 0) {
+      const userRole = auth.currentUser?.role
+      if (!userRole || !to.meta.roles.includes(userRole)) {
+        // Not authorised for this route
+        next('/forum')
+        return
+      }
     }
   }
   

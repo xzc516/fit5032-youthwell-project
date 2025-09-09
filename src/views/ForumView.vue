@@ -39,7 +39,7 @@
             <div class="invalid-feedback">{{ errors.summary }}</div>
           </div>
           <div class="col-12 col-md-4">
-            <label class="form-label fw-bold">Initial Rating (1-5)</label>
+            <label class="form-label fw-bold">Your Rating (1-5)</label>
             <input 
               v-model.number="form.rating" 
               type="number" 
@@ -80,13 +80,13 @@
                 <button
                   v-for="n in 5"
                   :key="n"
-                  :class="{ 'star-active': n <= post.rating }"
+                  :class="{ 'star-active': n <= Math.round(getAverageRating(post)) }"
                   @click.stop="ratePost(post.id, n)"
                   class="star-btn"
                 >
                   ★
                 </button>
-                <span class="rating-text ms-2">{{ post.rating }}/5</span>
+                <span class="rating-text ms-2">{{ getAverageRating(post).toFixed(1) }}/5 ({{ getRatingCount(post) }})</span>
               </div>
             </div>
           </div>
@@ -117,13 +117,13 @@
                   <button
                     v-for="n in 5"
                     :key="n"
-                    :class="{ 'star-active': n <= selectedPost.rating }"
+                    :class="{ 'star-active': n <= Math.round(getAverageRating(selectedPost)) }"
                     @click="ratePost(selectedPost.id, n)"
                     class="star-btn"
                   >
                     ★
                   </button>
-                  <span class="rating-text ms-2">{{ selectedPost.rating }}/5</span>
+                  <span class="rating-text ms-2">{{ getAverageRating(selectedPost).toFixed(1) }}/5 ({{ getRatingCount(selectedPost) }})</span>
                 </div>
               </div>
               <hr>
@@ -226,14 +226,23 @@ onMounted(() => {
       const parsedPosts = JSON.parse(saved)
       // Validate and sanitize loaded data
       if (Array.isArray(parsedPosts)) {
-        posts.value = parsedPosts.map(post => ({
-          id: post.id || Date.now(),
-          title: sanitizeContent(post.title || ''),
-          summary: sanitizeContent(post.summary || ''),
-          rating: Math.max(1, Math.min(5, parseInt(post.rating) || 3)),
-          author: sanitizeContent(post.author || 'Anonymous'),
-          timestamp: post.timestamp || Date.now()
-        }))
+        posts.value = parsedPosts.map(post => {
+          // Migrate legacy single rating to ratings array
+          const ratingsArray = Array.isArray(post.ratings)
+            ? post.ratings.filter(r => r && typeof r.user === 'string' && !isNaN(parseInt(r.score)))
+            : (typeof post.rating !== 'undefined'
+                ? [{ user: sanitizeContent(post.author || 'Anonymous'), score: Math.max(1, Math.min(5, parseInt(post.rating) || 3)) }]
+                : [])
+
+          return {
+            id: post.id || Date.now(),
+            title: sanitizeContent(post.title || ''),
+            summary: sanitizeContent(post.summary || ''),
+            ratings: ratingsArray,
+            author: sanitizeContent(post.author || 'Anonymous'),
+            timestamp: post.timestamp || Date.now()
+          }
+        })
       }
     } else {
       // Default posts
@@ -242,7 +251,7 @@ onMounted(() => {
           id: 1, 
           title: 'How to Deal with Exam Anxiety?', 
           summary: 'Share practical methods and breathing exercises to help manage stress during exam periods.', 
-          rating: 4,
+          ratings: [{ user: 'Anonymous', score: 4 }],
           author: 'Anonymous',
           timestamp: Date.now()
         },
@@ -250,7 +259,7 @@ onMounted(() => {
           id: 2, 
           title: 'University Social Skills', 
           summary: 'Tips on building connections and support networks in new environments.', 
-          rating: 3,
+          ratings: [{ user: 'Anonymous', score: 3 }],
           author: 'Anonymous',
           timestamp: Date.now()
         },
@@ -264,7 +273,7 @@ onMounted(() => {
         id: 1, 
         title: 'How to Deal with Exam Anxiety?', 
         summary: 'Share practical methods and breathing exercises to help manage stress during exam periods.', 
-        rating: 4,
+        ratings: [{ user: 'Anonymous', score: 4 }],
         author: 'Anonymous',
         timestamp: Date.now()
       }
@@ -280,6 +289,17 @@ watch(posts, (val) => {
   }
 }, { deep: true })
 
+function getAverageRating(post) {
+  const list = Array.isArray(post?.ratings) ? post.ratings : []
+  if (list.length === 0) return 0
+  const sum = list.reduce((acc, r) => acc + Math.max(1, Math.min(5, parseInt(r.score) || 0)), 0)
+  return sum / list.length
+}
+
+function getRatingCount(post) {
+  return Array.isArray(post?.ratings) ? post.ratings.length : 0
+}
+
 function ratePost(id, value) {
   try {
     const target = posts.value.find(p => p.id === id)
@@ -287,7 +307,18 @@ function ratePost(id, value) {
     
     // Validate rating value
     const validRating = Math.max(1, Math.min(5, parseInt(value) || 1))
-    target.rating = validRating
+    const user = auth.currentUser?.username || 'Anonymous'
+
+    // Ensure ratings array exists
+    if (!Array.isArray(target.ratings)) target.ratings = []
+
+    // Upsert user's rating (each user can rate once)
+    const existing = target.ratings.find(r => r.user === user)
+    if (existing) {
+      existing.score = validRating
+    } else {
+      target.ratings.push({ user, score: validRating })
+    }
   } catch (error) {
     console.error('Error rating post:', error)
   }
@@ -312,12 +343,13 @@ function submitPost() {
   if (!validate()) return
   
   try {
+    const initialRater = auth.currentUser?.username || 'Anonymous'
     const newPost = {
       id: Date.now(),
       title: sanitizeContent(form.value.title),
       summary: sanitizeContent(form.value.summary),
-      rating: parseInt(form.value.rating),
-      author: auth.currentUser?.username || 'Anonymous',
+      ratings: [{ user: initialRater, score: parseInt(form.value.rating) }],
+      author: initialRater,
       timestamp: Date.now()
     }
     

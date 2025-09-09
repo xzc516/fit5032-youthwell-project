@@ -12,10 +12,10 @@ YouthWell is a Vue 3 web application that supports youth mental health through a
 
 ## Key Features
 - Authentication: Login/Register, persisted to localStorage
-- Role-based access: `user` and `admin`, route guards
-- Forum: create posts, star rating per post, detail modal
-- Validations: required, min/max length, numeric range with clear feedback
-- Dynamic data: posts rendered from reactive state, persisted & restored
+- Role-based access: `user` and `admin`, route guards with per-route roles
+- Forum: create posts, star rating with aggregated average per post, detail modal
+- Validations: required, min/max length, username format, password complexity, numeric range
+- Dynamic data: posts rendered from reactive state, ratings aggregated per user, persisted & restored
 - Responsive UI: optimized for <576px, 576–768px, 992–1200px, >1400px
 - Security basics: input sanitization (XSS), demo-grade password hashing
 
@@ -47,8 +47,8 @@ Open the printed local URL in your browser.
 ## Routes
 - `/login` – login page
 - `/register` – registration page
-- `/forum` – protected, forum with post creation, rating, detail modal
-- `/map` – protected, resources map placeholder
+- `/forum` – protected, forum with post creation, aggregated rating, detail modal (roles: user/admin)
+- `/map` – protected, resources map placeholder (roles: admin only)
 
 ## Validations (examples)
 - Title: required, 3–50 chars
