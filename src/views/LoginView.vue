@@ -30,37 +30,70 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { 
+  validateFormData, 
+  sanitizeWithAllowlist, 
+  detectMaliciousContent,
+  RateLimiter 
+} from '../utils/security'
 
 const auth = useAuthStore()
 const username = ref('')
 const password = ref('')
 const error = ref('')
 
-// Input validation function
+// Rate limiter for login attempts (5 attempts per minute)
+const loginRateLimiter = new RateLimiter(5, 60000)
+
+// Enhanced validation rules
+const validationRules = {
+  username: {
+    required: true,
+    minLength: 3,
+    maxLength: 30,
+    pattern: /^[a-zA-Z0-9_]+$/,
+    patternMessage: 'Username can only contain letters, numbers, and underscores',
+    validator: (value) => !detectMaliciousContent(value),
+    validatorMessage: 'Username contains invalid characters'
+  },
+  password: {
+    required: true,
+    minLength: 6,
+    maxLength: 50,
+    validator: (value) => !detectMaliciousContent(value),
+    validatorMessage: 'Password contains invalid characters'
+  }
+}
+
+// Enhanced input validation function
 function validateInput() {
   error.value = ''
   
-  if (!username.value.trim()) {
-    error.value = 'Username is required'
+  // Sanitize inputs
+  const cleanUsername = sanitizeWithAllowlist(username.value.trim())
+  const cleanPassword = password.value
+  
+  // Validate using security rules
+  const validation = validateFormData(
+    { username: cleanUsername, password: cleanPassword }, 
+    validationRules
+  )
+  
+  if (!validation.isValid) {
+    const firstError = Object.values(validation.errors)[0]
+    error.value = firstError
     return false
   }
   
-  if (!password.value) {
-    error.value = 'Password is required'
+  // Check rate limiting
+  const clientId = navigator.userAgent + window.location.hostname
+  if (!loginRateLimiter.isAllowed(clientId)) {
+    error.value = 'Too many login attempts. Please try again later.'
     return false
   }
   
-  // Check username length
-  if (username.value.trim().length < 3) {
-    error.value = 'Username must be at least 3 characters long'
-    return false
-  }
-  
-  // Check password length
-  if (password.value.length < 6) {
-    error.value = 'Password must be at least 6 characters long'
-    return false
-  }
+  // Update the form values with sanitized data
+  username.value = cleanUsername
   
   return true
 }

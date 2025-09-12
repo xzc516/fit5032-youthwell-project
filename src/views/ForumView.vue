@@ -147,6 +147,12 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { 
+  validateFormData, 
+  sanitizeWithAllowlist, 
+  detectMaliciousContent,
+  RateLimiter 
+} from '../utils/security'
 
 const auth = useAuthStore()
 const posts = ref([])

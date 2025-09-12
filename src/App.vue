@@ -11,8 +11,11 @@
           <a class="nav-link" href="#" @click.prevent="$router.push('/forum')" :class="{ active: $route.path === '/forum' }">
             Forum
           </a>
-          <a class="nav-link" v-if="auth.isAdmin()" href="#" @click.prevent="$router.push('/map')" :class="{ active: $route.path === '/map' }">
+          <a class="nav-link" href="#" @click.prevent="$router.push('/map')" :class="{ active: $route.path === '/map' }">
             Map
+          </a>
+          <a class="nav-link" v-if="auth.isAdmin()" href="#" @click.prevent="$router.push('/admin')" :class="{ active: $route.path === '/admin' }">
+            Admin Panel
           </a>
           <span class="navbar-text ms-3" v-if="auth.currentUser">Hello, {{ auth.currentUser.username }} ({{ auth.currentUser.role }})</span>
           <a class="nav-link ms-2" v-if="auth.currentUser" href="#" @click.prevent="logout">Logout</a>

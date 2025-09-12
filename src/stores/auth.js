@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { generateCSRFToken } from '../utils/security'
 
 // Enhanced password hashing function
 function hashString(text) {
@@ -46,13 +47,14 @@ function sanitize(input) {
 // Input validation function
 function validateInput(input, type) {
   switch (type) {
-    case 'username':
+    case 'username': {
       // Username: 3-30 characters, only letters, numbers, underscores allowed
       const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/
       if (!usernameRegex.test(input)) {
         throw new Error('Username must be 3-30 characters and contain only letters, numbers, and underscores')
       }
       break
+    }
     case 'password':
       // Password: at least 6 characters, must contain letters and numbers
       if (input.length < 6) {
@@ -75,8 +77,10 @@ function validateInput(input, type) {
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    currentUser: null, // { username, role }
-    users: [], // [{ username, passwordHash, role }]
+    currentUser: null, // { username, role, sessionToken, lastActivity }
+    users: [], // [{ username, passwordHash, role, registrationDate, lastLogin }]
+    csrfToken: generateCSRFToken(),
+    sessionTimeout: 30 * 60 * 1000, // 30 minutes
   }),
   actions: {
     load() {
@@ -117,8 +121,13 @@ export const useAuthStore = defineStore('auth', {
         console.error('Error persisting auth state:', error)
       }
     },
-    register({ username, password, role = 'user' }) {
+    register({ username, password, role = 'user', csrfToken }) {
       try {
+        // CSRF protection
+        if (csrfToken !== this.csrfToken) {
+          throw new Error('Invalid CSRF token')
+        }
+        
         // Input validation
         const cleanUsername = sanitize(username)
         const cleanRole = sanitize(role)
@@ -137,10 +146,13 @@ export const useAuthStore = defineStore('auth', {
         const newUser = {
           username: cleanUsername,
           passwordHash,
-          role: cleanRole
+          role: cleanRole,
+          registrationDate: new Date().toISOString(),
+          lastLogin: null
         }
         
         this.users.push(newUser)
+        this.regenerateCSRFToken()
         this.persist()
         
         return { success: true, message: 'User registered successfully' }
@@ -148,8 +160,13 @@ export const useAuthStore = defineStore('auth', {
         throw new Error(error.message || 'Registration failed')
       }
     },
-    login({ username, password }) {
+    login({ username, password, csrfToken }) {
       try {
+        // CSRF protection
+        if (csrfToken && csrfToken !== this.csrfToken) {
+          throw new Error('Invalid CSRF token')
+        }
+        
         const cleanUsername = sanitize(username)
         
         if (!cleanUsername || !password) {
@@ -167,11 +184,24 @@ export const useAuthStore = defineStore('auth', {
           throw new Error('Invalid credentials')
         }
         
-        // Set current user
+        // Update user's last login
+        const userIndex = this.users.findIndex(u => u.username === cleanUsername)
+        if (userIndex !== -1) {
+          this.users[userIndex].lastLogin = new Date().toISOString()
+        }
+        
+        // Generate session token
+        const sessionToken = generateCSRFToken()
+        
+        // Set current user with session info
         this.currentUser = {
           username: user.username,
-          role: user.role
+          role: user.role,
+          sessionToken,
+          lastActivity: Date.now()
         }
+        
+        this.regenerateCSRFToken()
         this.persist()
         
         return { success: true, user: this.currentUser }
@@ -200,13 +230,43 @@ export const useAuthStore = defineStore('auth', {
     },
     // Security check methods
     isAuthenticated() {
-      return this.currentUser !== null
+      if (!this.currentUser) return false
+      
+      // Check session timeout
+      if (this.currentUser.lastActivity) {
+        const now = Date.now()
+        const timeSinceLastActivity = now - this.currentUser.lastActivity
+        if (timeSinceLastActivity > this.sessionTimeout) {
+          this.logout()
+          return false
+        }
+      }
+      
+      return true
     },
     hasRole(role) {
-      return this.currentUser && this.currentUser.role === role
+      return this.isAuthenticated() && this.currentUser.role === role
     },
     isAdmin() {
       return this.hasRole('admin')
+    },
+    updateActivity() {
+      if (this.currentUser) {
+        this.currentUser.lastActivity = Date.now()
+        this.persist()
+      }
+    },
+    regenerateCSRFToken() {
+      this.csrfToken = generateCSRFToken()
+    },
+    getCSRFToken() {
+      return this.csrfToken
+    },
+    validateSession() {
+      if (!this.isAuthenticated()) {
+        throw new Error('Session expired. Please login again.')
+      }
+      this.updateActivity()
     }
   },
 })

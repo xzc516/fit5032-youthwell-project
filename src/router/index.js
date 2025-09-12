@@ -4,6 +4,7 @@ import ForumView from '../views/ForumView.vue'
 import LoginView from '../views/LoginView.vue'
 import MapView from '../views/MapView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import AdminDashboardView from '../views/AdminDashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -22,6 +23,12 @@ const router = createRouter({
       path: '/map',
       name: 'map',
       component: MapView,
+      meta: { requiresAuth: true, roles: ['user', 'admin'] }
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminDashboardView,
       meta: { requiresAuth: true, roles: ['admin'] }
     },
     {

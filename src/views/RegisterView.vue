@@ -19,7 +19,15 @@
               </div>
               <div class="col-12 col-md-6">
                 <label class="form-label">Password</label>
-                <input v-model="password" type="password" class="form-control" required minlength="6" />
+                <input v-model="password" @input="updatePasswordStrength" type="password" class="form-control" required minlength="6" />
+                <div v-if="passwordStrength" class="mt-1">
+                  <small class="text-muted">Password strength: </small>
+                  <span :class="{
+                    'text-danger': passwordStrength === 'weak',
+                    'text-warning': passwordStrength === 'medium',
+                    'text-success': passwordStrength === 'strong'
+                  }">{{ passwordStrength.toUpperCase() }}</span>
+                </div>
               </div>
               <div class="col-12 col-md-6">
                 <label class="form-label">Confirm Password</label>
@@ -42,6 +50,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { 
+  validateFormData, 
+  sanitizeWithAllowlist, 
+  detectMaliciousContent,
+  checkPasswordStrength,
+  RateLimiter 
+} from '../utils/security'
 
 const auth = useAuthStore()
 const username = ref('')
@@ -50,71 +65,97 @@ const confirm = ref('')
 const role = ref('user')
 const error = ref('')
 const success = ref('')
+const passwordStrength = ref('')
+
+// Rate limiter for registration attempts (3 attempts per minute)
+const registerRateLimiter = new RateLimiter(3, 60000)
+
+// Enhanced validation rules
+const validationRules = {
+  username: {
+    required: true,
+    minLength: 3,
+    maxLength: 30,
+    pattern: /^[a-zA-Z0-9_]+$/,
+    patternMessage: 'Username can only contain letters, numbers, and underscores',
+    validator: (value) => !detectMaliciousContent(value),
+    validatorMessage: 'Username contains invalid characters'
+  },
+  password: {
+    required: true,
+    minLength: 6,
+    maxLength: 50,
+    validator: (value) => {
+      if (detectMaliciousContent(value)) return false
+      const hasLetter = /[a-zA-Z]/.test(value)
+      const hasNumber = /[0-9]/.test(value)
+      return hasLetter && hasNumber
+    },
+    validatorMessage: 'Password must contain both letters and numbers'
+  },
+  confirm: {
+    required: true,
+    validator: (value) => value === password.value,
+    validatorMessage: 'Passwords do not match'
+  },
+  role: {
+    required: true,
+    validator: (value) => ['user', 'admin'].includes(value),
+    validatorMessage: 'Invalid role selected'
+  }
+}
+
+// Watch password for strength indicator
+function updatePasswordStrength() {
+  if (!password.value) {
+    passwordStrength.value = ''
+    return
+  }
+  
+  const strength = checkPasswordStrength(password.value)
+  passwordStrength.value = strength
+}
 
 // Enhanced input validation function
 function validateInput() {
   error.value = ''
   
-  // Validate username
-  if (!username.value.trim()) {
-    error.value = 'Username is required'
+  // Sanitize inputs
+  const cleanUsername = sanitizeWithAllowlist(username.value.trim())
+  const cleanPassword = password.value
+  const cleanConfirm = confirm.value
+  const cleanRole = role.value
+  
+  // Validate using security rules
+  const validation = validateFormData({
+    username: cleanUsername,
+    password: cleanPassword,
+    confirm: cleanConfirm,
+    role: cleanRole
+  }, validationRules)
+  
+  if (!validation.isValid) {
+    const firstError = Object.values(validation.errors)[0]
+    error.value = firstError
     return false
   }
   
-  if (username.value.trim().length < 3) {
-    error.value = 'Username must be at least 3 characters long'
+  // Check password strength
+  const strength = checkPasswordStrength(cleanPassword)
+  if (strength === 'weak') {
+    error.value = 'Password is too weak. Consider using a longer password with mixed case letters, numbers, and symbols.'
     return false
   }
   
-  if (username.value.trim().length > 30) {
-    error.value = 'Username must be no more than 30 characters long'
+  // Check rate limiting
+  const clientId = navigator.userAgent + window.location.hostname
+  if (!registerRateLimiter.isAllowed(clientId)) {
+    error.value = 'Too many registration attempts. Please try again later.'
     return false
   }
   
-  // Check username format (only letters, numbers, underscores allowed)
-  if (!/^[a-zA-Z0-9_]+$/.test(username.value.trim())) {
-    error.value = 'Username can only contain letters, numbers, and underscores'
-    return false
-  }
-  
-  // Validate password
-  if (!password.value) {
-    error.value = 'Password is required'
-    return false
-  }
-  
-  if (password.value.length < 6) {
-    error.value = 'Password must be at least 6 characters long'
-    return false
-  }
-  
-  if (password.value.length > 50) {
-    error.value = 'Password must be no more than 50 characters long'
-    return false
-  }
-  
-  // Check password complexity
-  if (!/[a-zA-Z]/.test(password.value)) {
-    error.value = 'Password must contain at least one letter'
-    return false
-  }
-  
-  if (!/[0-9]/.test(password.value)) {
-    error.value = 'Password must contain at least one number'
-    return false
-  }
-  
-  // Validate confirm password
-  if (password.value !== confirm.value) {
-    error.value = 'Passwords do not match'
-    return false
-  }
-  
-  // Validate role
-  if (!['user', 'admin'].includes(role.value)) {
-    error.value = 'Invalid role selected'
-    return false
-  }
+  // Update form values with sanitized data
+  username.value = cleanUsername
   
   return true
 }
