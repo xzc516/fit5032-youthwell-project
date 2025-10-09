@@ -6,19 +6,19 @@
           <strong>YouthWell</strong>
         </a>
         <div class="navbar-nav ms-auto">
-          <a class="nav-link" href="#" @click.prevent="$router.push('/login')" v-if="!auth.currentUser" :class="{ active: $route.path === '/login' }">Login</a>
-          <a class="nav-link" href="#" @click.prevent="$router.push('/register')" v-if="!auth.currentUser" :class="{ active: $route.path === '/register' }">Register</a>
+          <a class="nav-link" href="#" @click.prevent="$router.push('/login')" v-if="!auth.isAuthenticated" :class="{ active: $route.path === '/login' }">Login</a>
+          <a class="nav-link" href="#" @click.prevent="$router.push('/register')" v-if="!auth.isAuthenticated" :class="{ active: $route.path === '/register' }">Register</a>
           <a class="nav-link" href="#" @click.prevent="$router.push('/forum')" :class="{ active: $route.path === '/forum' }">
             Forum
           </a>
           <a class="nav-link" href="#" @click.prevent="$router.push('/map')" :class="{ active: $route.path === '/map' }">
             Map
           </a>
-          <a class="nav-link" v-if="auth.isAdmin()" href="#" @click.prevent="$router.push('/admin')" :class="{ active: $route.path === '/admin' }">
+          <a class="nav-link" v-if="auth.isAdmin" href="#" @click.prevent="$router.push('/admin')" :class="{ active: $route.path === '/admin' }">
             Admin Panel
           </a>
-          <span class="navbar-text ms-3" v-if="auth.currentUser">Hello, {{ auth.currentUser.username }} ({{ auth.currentUser.role }})</span>
-          <a class="nav-link ms-2" v-if="auth.currentUser" href="#" @click.prevent="logout">Logout</a>
+          <span class="navbar-text ms-3" v-if="auth.isAuthenticated">Hello, {{ auth.currentUser?.username }} ({{ auth.currentUser?.role }})</span>
+          <a class="nav-link ms-2" v-if="auth.isAuthenticated" href="#" @click.prevent="logout">Logout</a>
         </div>
       </div>
     </nav>
@@ -29,13 +29,24 @@
 </template>
 
 <script setup>
-import { useAuthStore } from './stores/auth'
-const auth = useAuthStore()
-auth.load()
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useFirebaseAuthStore } from './stores/firebaseAuth'
 
-function logout() {
-  auth.logout()
-  window.location.assign('/login')
+const auth = useFirebaseAuthStore()
+const router = useRouter()
+
+onMounted(async () => {
+  await auth.initAuth()
+})
+
+async function logout() {
+  try {
+    await auth.logout()
+    router.push('/login')
+  } catch (error) {
+    console.error('Logout error:', error)
+  }
 }
 </script>
 

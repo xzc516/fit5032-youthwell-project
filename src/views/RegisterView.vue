@@ -7,19 +7,16 @@
           <div class="card-body">
             <form @submit.prevent="onSubmit" class="row g-3">
               <div class="col-12 col-md-6">
-                <label class="form-label">Username</label>
-                <input v-model.trim="username" class="form-control" required minlength="3" maxlength="30" />
+                <label class="form-label">Email</label>
+                <input v-model.trim="email" type="email" class="form-control" required placeholder="your@email.com" autocomplete="email" />
               </div>
               <div class="col-12 col-md-6">
-                <label class="form-label">Role</label>
-                <select v-model="role" class="form-select">
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                </select>
+                <label class="form-label">Username</label>
+                <input v-model.trim="username" class="form-control" required minlength="3" maxlength="30" placeholder="Username" autocomplete="username" />
               </div>
               <div class="col-12 col-md-6">
                 <label class="form-label">Password</label>
-                <input v-model="password" @input="updatePasswordStrength" type="password" class="form-control" required minlength="6" />
+                <input v-model="password" @input="updatePasswordStrength" type="password" class="form-control" required minlength="6" autocomplete="new-password" />
                 <div v-if="passwordStrength" class="mt-1">
                   <small class="text-muted">Password strength: </small>
                   <span :class="{
@@ -31,10 +28,20 @@
               </div>
               <div class="col-12 col-md-6">
                 <label class="form-label">Confirm Password</label>
-                <input v-model="confirm" type="password" class="form-control" required />
+                <input v-model="confirm" type="password" class="form-control" required autocomplete="new-password" />
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Role</label>
+                <select v-model="role" class="form-select">
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
               </div>
               <div class="col-12 d-flex justify-content-between align-items-center">
-                <button class="btn btn-primary" type="submit">Create Account</button>
+                <button class="btn btn-primary" type="submit" :disabled="loading">
+                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+                  {{ loading ? 'Creating Account...' : 'Create Account' }}
+                </button>
                 <button class="btn btn-link" type="button" @click="$router.push('/login')">Back to login</button>
               </div>
               <p v-if="error" class="text-danger mb-0">{{ error }}</p>
@@ -48,62 +55,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useAuthStore } from '../stores/auth'
-import { 
-  validateFormData, 
-  sanitizeWithAllowlist, 
-  detectMaliciousContent,
-  checkPasswordStrength,
-  RateLimiter 
-} from '../utils/security'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useFirebaseAuthStore } from '../stores/firebaseAuth'
+import { checkPasswordStrength, RateLimiter } from '../utils/security'
 
-const auth = useAuthStore()
+const auth = useFirebaseAuthStore()
+const router = useRouter()
+
+const email = ref('')
 const username = ref('')
 const password = ref('')
 const confirm = ref('')
 const role = ref('user')
 const error = ref('')
 const success = ref('')
+const loading = ref(false)
 const passwordStrength = ref('')
 
 // Rate limiter for registration attempts (3 attempts per minute)
 const registerRateLimiter = new RateLimiter(3, 60000)
-
-// Enhanced validation rules
-const validationRules = {
-  username: {
-    required: true,
-    minLength: 3,
-    maxLength: 30,
-    pattern: /^[a-zA-Z0-9_]+$/,
-    patternMessage: 'Username can only contain letters, numbers, and underscores',
-    validator: (value) => !detectMaliciousContent(value),
-    validatorMessage: 'Username contains invalid characters'
-  },
-  password: {
-    required: true,
-    minLength: 6,
-    maxLength: 50,
-    validator: (value) => {
-      if (detectMaliciousContent(value)) return false
-      const hasLetter = /[a-zA-Z]/.test(value)
-      const hasNumber = /[0-9]/.test(value)
-      return hasLetter && hasNumber
-    },
-    validatorMessage: 'Password must contain both letters and numbers'
-  },
-  confirm: {
-    required: true,
-    validator: (value) => value === password.value,
-    validatorMessage: 'Passwords do not match'
-  },
-  role: {
-    required: true,
-    validator: (value) => ['user', 'admin'].includes(value),
-    validatorMessage: 'Invalid role selected'
-  }
-}
 
 // Watch password for strength indicator
 function updatePasswordStrength() {
@@ -111,81 +82,65 @@ function updatePasswordStrength() {
     passwordStrength.value = ''
     return
   }
-  
+
   const strength = checkPasswordStrength(password.value)
   passwordStrength.value = strength
 }
 
-// Enhanced input validation function
-function validateInput() {
+async function onSubmit() {
   error.value = ''
-  
-  // Sanitize inputs
-  const cleanUsername = sanitizeWithAllowlist(username.value.trim())
-  const cleanPassword = password.value
-  const cleanConfirm = confirm.value
-  const cleanRole = role.value
-  
-  // Validate using security rules
-  const validation = validateFormData({
-    username: cleanUsername,
-    password: cleanPassword,
-    confirm: cleanConfirm,
-    role: cleanRole
-  }, validationRules)
-  
-  if (!validation.isValid) {
-    const firstError = Object.values(validation.errors)[0]
-    error.value = firstError
-    return false
+
+  // Basic validation
+  if (!email.value || !username.value || !password.value || !confirm.value) {
+    error.value = 'All fields are required'
+    return
   }
-  
+
+  if (password.value !== confirm.value) {
+    error.value = 'Passwords do not match'
+    return
+  }
+
   // Check password strength
-  const strength = checkPasswordStrength(cleanPassword)
+  const strength = checkPasswordStrength(password.value)
   if (strength === 'weak') {
-    error.value = 'Password is too weak. Consider using a longer password with mixed case letters, numbers, and symbols.'
-    return false
+    error.value = 'Password is too weak. Use at least 8 characters with letters, numbers, and symbols.'
+    return
   }
-  
+
   // Check rate limiting
   const clientId = navigator.userAgent + window.location.hostname
   if (!registerRateLimiter.isAllowed(clientId)) {
     error.value = 'Too many registration attempts. Please try again later.'
-    return false
+    return
   }
-  
-  // Update form values with sanitized data
-  username.value = cleanUsername
-  
-  return true
-}
 
-onMounted(() => auth.load())
+  loading.value = true
 
-function onSubmit() {
-  if (!validateInput()) return
-  
   try {
-    auth.register({ 
-      username: username.value, 
-      password: password.value, 
-      role: role.value 
+    await auth.register({
+      email: email.value,
+      password: password.value,
+      username: username.value,
+      role: role.value
     })
-    
+
     success.value = 'Account created successfully! Redirecting to login...'
-    
+
     // Clear form
+    email.value = ''
     username.value = ''
     password.value = ''
     confirm.value = ''
     role.value = 'user'
-    
+
     // Delay redirect
-    setTimeout(() => { 
-      window.location.assign('/login') 
+    setTimeout(() => {
+      router.push('/login')
     }, 2000)
   } catch (e) {
     error.value = e.message || 'Registration failed'
+    loading.value = false
   }
 }
 </script>

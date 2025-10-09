@@ -145,17 +145,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import { useAuthStore } from '../stores/auth'
-import { 
-  validateFormData, 
-  sanitizeWithAllowlist, 
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useFirebaseAuthStore } from '../stores/firebaseAuth'
+import { useForumStore } from '../stores/forum'
+import {
+  validateFormData,
+  sanitizeWithAllowlist,
   detectMaliciousContent,
-  RateLimiter 
+  RateLimiter
 } from '../utils/security'
 
-const auth = useAuthStore()
-const posts = ref([])
+const auth = useFirebaseAuthStore()
+const forumStore = useForumStore()
+const posts = computed(() => forumStore.sortedPosts)
 const form = ref({ title: '', summary: '', rating: 3 })
 const errors = ref({ title: '', summary: '', rating: '' })
 const selectedPost = ref(null)
@@ -226,107 +228,32 @@ function validateInput(input, type) {
 }
 
 onMounted(() => {
-  try {
-    const saved = localStorage.getItem('forum-posts')
-    if (saved) {
-      const parsedPosts = JSON.parse(saved)
-      // Validate and sanitize loaded data
-      if (Array.isArray(parsedPosts)) {
-        posts.value = parsedPosts.map(post => {
-          // Migrate legacy single rating to ratings array
-          const ratingsArray = Array.isArray(post.ratings)
-            ? post.ratings.filter(r => r && typeof r.user === 'string' && !isNaN(parseInt(r.score)))
-            : (typeof post.rating !== 'undefined'
-                ? [{ user: sanitizeContent(post.author || 'Anonymous'), score: Math.max(1, Math.min(5, parseInt(post.rating) || 3)) }]
-                : [])
-
-          return {
-            id: post.id || Date.now(),
-            title: sanitizeContent(post.title || ''),
-            summary: sanitizeContent(post.summary || ''),
-            ratings: ratingsArray,
-            author: sanitizeContent(post.author || 'Anonymous'),
-            timestamp: post.timestamp || Date.now()
-          }
-        })
-      }
-    } else {
-      // Default posts
-      posts.value = [
-        { 
-          id: 1, 
-          title: 'How to Deal with Exam Anxiety?', 
-          summary: 'Share practical methods and breathing exercises to help manage stress during exam periods.', 
-          ratings: [{ user: 'Anonymous', score: 4 }],
-          author: 'Anonymous',
-          timestamp: Date.now()
-        },
-        { 
-          id: 2, 
-          title: 'University Social Skills', 
-          summary: 'Tips on building connections and support networks in new environments.', 
-          ratings: [{ user: 'Anonymous', score: 3 }],
-          author: 'Anonymous',
-          timestamp: Date.now()
-        },
-      ]
-    }
-  } catch (error) {
-    console.error('Error loading forum posts:', error)
-    // If data is corrupted, use default data
-    posts.value = [
-      { 
-        id: 1, 
-        title: 'How to Deal with Exam Anxiety?', 
-        summary: 'Share practical methods and breathing exercises to help manage stress during exam periods.', 
-        ratings: [{ user: 'Anonymous', score: 4 }],
-        author: 'Anonymous',
-        timestamp: Date.now()
-      }
-    ]
-  }
+  // Subscribe to real-time Firestore updates
+  forumStore.subscribeToPosts()
 })
 
-watch(posts, (val) => {
-  try {
-    localStorage.setItem('forum-posts', JSON.stringify(val))
-  } catch (error) {
-    console.error('Error saving forum posts:', error)
-  }
-}, { deep: true })
+onUnmounted(() => {
+  // Clean up Firestore listener
+  forumStore.unsubscribeFromPosts()
+})
 
 function getAverageRating(post) {
-  const list = Array.isArray(post?.ratings) ? post.ratings : []
-  if (list.length === 0) return 0
-  const sum = list.reduce((acc, r) => acc + Math.max(1, Math.min(5, parseInt(r.score) || 0)), 0)
-  return sum / list.length
+  return forumStore.getAverageRating(post)
 }
 
 function getRatingCount(post) {
-  return Array.isArray(post?.ratings) ? post.ratings.length : 0
+  return forumStore.getRatingCount(post)
 }
 
-function ratePost(id, value) {
+async function ratePost(id, value) {
   try {
-    const target = posts.value.find(p => p.id === id)
-    if (!target) return
-    
-    // Validate rating value
-    const validRating = Math.max(1, Math.min(5, parseInt(value) || 1))
-    const user = auth.currentUser?.username || 'Anonymous'
+    const username = auth.currentUser?.username || 'Anonymous'
+    const userId = auth.currentUser?.uid || 'anonymous'
 
-    // Ensure ratings array exists
-    if (!Array.isArray(target.ratings)) target.ratings = []
-
-    // Upsert user's rating (each user can rate once)
-    const existing = target.ratings.find(r => r.user === user)
-    if (existing) {
-      existing.score = validRating
-    } else {
-      target.ratings.push({ user, score: validRating })
-    }
+    await forumStore.ratePost(id, value, username, userId)
   } catch (error) {
     console.error('Error rating post:', error)
+    alert('Failed to rate post: ' + error.message)
   }
 }
 
@@ -345,28 +272,28 @@ function validate() {
   return !errors.value.title && !errors.value.summary && !errors.value.rating
 }
 
-function submitPost() {
+async function submitPost() {
   if (!validate()) return
-  
+
   try {
-    const initialRater = auth.currentUser?.username || 'Anonymous'
-    const newPost = {
-      id: Date.now(),
-      title: sanitizeContent(form.value.title),
-      summary: sanitizeContent(form.value.summary),
-      ratings: [{ user: initialRater, score: parseInt(form.value.rating) }],
-      author: initialRater,
-      timestamp: Date.now()
-    }
-    
-    posts.value = [newPost, ...posts.value]
+    const author = auth.currentUser?.username || 'Anonymous'
+    const authorId = auth.currentUser?.uid || 'anonymous'
+
+    await forumStore.createPost({
+      title: form.value.title,
+      summary: form.value.summary,
+      rating: form.value.rating,
+      author,
+      authorId
+    })
+
     form.value = { title: '', summary: '', rating: 3 }
-    
+
     // Show success message
     alert('Post published successfully!')
   } catch (error) {
     console.error('Error submitting post:', error)
-    alert('Error publishing post. Please try again.')
+    alert('Error publishing post: ' + error.message)
   }
 }
 

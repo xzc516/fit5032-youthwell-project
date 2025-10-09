@@ -7,15 +7,18 @@
           <div class="card-body">
             <form @submit.prevent="onSubmit" class="row g-3">
               <div class="col-12">
-                <label class="form-label">Username</label>
-                <input v-model.trim="username" class="form-control" required />
+                <label class="form-label">Email</label>
+                <input v-model.trim="email" type="email" class="form-control" required placeholder="your@email.com" autocomplete="email" />
               </div>
               <div class="col-12">
                 <label class="form-label">Password</label>
-                <input v-model="password" type="password" class="form-control" required />
+                <input v-model="password" type="password" class="form-control" required autocomplete="current-password" />
               </div>
               <div class="col-12 d-flex justify-content-between align-items-center">
-                <button class="btn btn-primary" type="submit">Login</button>
+                <button class="btn btn-primary" type="submit" :disabled="loading">
+                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+                  {{ loading ? 'Logging in...' : 'Login' }}
+                </button>
                 <button class="btn btn-link" type="button" @click="$router.push('/register')">Create account</button>
               </div>
               <p v-if="error" class="text-danger mb-0">{{ error }}</p>
@@ -28,103 +31,69 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useAuthStore } from '../stores/auth'
-import { 
-  validateFormData, 
-  sanitizeWithAllowlist, 
-  detectMaliciousContent,
-  RateLimiter 
-} from '../utils/security'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useFirebaseAuthStore } from '../stores/firebaseAuth'
+import { RateLimiter } from '../utils/security'
 
-const auth = useAuthStore()
-const username = ref('')
+const auth = useFirebaseAuthStore()
+const router = useRouter()
+
+const email = ref('')
 const password = ref('')
 const error = ref('')
+const loading = ref(false)
 
 // Rate limiter for login attempts (5 attempts per minute)
 const loginRateLimiter = new RateLimiter(5, 60000)
 
-// Enhanced validation rules
-const validationRules = {
-  username: {
-    required: true,
-    minLength: 3,
-    maxLength: 30,
-    pattern: /^[a-zA-Z0-9_]+$/,
-    patternMessage: 'Username can only contain letters, numbers, and underscores',
-    validator: (value) => !detectMaliciousContent(value),
-    validatorMessage: 'Username contains invalid characters'
-  },
-  password: {
-    required: true,
-    minLength: 6,
-    maxLength: 50,
-    validator: (value) => !detectMaliciousContent(value),
-    validatorMessage: 'Password contains invalid characters'
-  }
-}
-
-// Enhanced input validation function
-function validateInput() {
+async function onSubmit() {
   error.value = ''
-  
-  // Sanitize inputs
-  const cleanUsername = sanitizeWithAllowlist(username.value.trim())
-  const cleanPassword = password.value
-  
-  // Validate using security rules
-  const validation = validateFormData(
-    { username: cleanUsername, password: cleanPassword }, 
-    validationRules
-  )
-  
-  if (!validation.isValid) {
-    const firstError = Object.values(validation.errors)[0]
-    error.value = firstError
-    return false
+
+  // Basic validation
+  if (!email.value || !password.value) {
+    error.value = 'Email and password are required'
+    return
   }
-  
+
   // Check rate limiting
   const clientId = navigator.userAgent + window.location.hostname
   if (!loginRateLimiter.isAllowed(clientId)) {
     error.value = 'Too many login attempts. Please try again later.'
-    return false
+    return
   }
-  
-  // Update the form values with sanitized data
-  username.value = cleanUsername
-  
-  return true
-}
 
-onMounted(() => { 
-  auth.load(); 
-  auth.ensureAdminSeed() 
-})
+  loading.value = true
 
-function onSubmit() {
-  if (!validateInput()) return
-  
   try {
-    auth.login({ username: username.value, password: password.value })
-    
-    if (auth.currentUser?.role === 'admin') {
-      window.alert('Logged in as admin')
-    }
-    
+    await auth.login({
+      email: email.value,
+      password: password.value
+    })
+
     // Check for redirect parameter
     const urlParams = new URLSearchParams(window.location.search)
     const redirect = urlParams.get('redirect')
-    
-    // Redirect to previous page or forum
+
+    // Determine redirect based on user role
+    let targetRoute = '/forum' // Default for regular users
+
     if (redirect && redirect !== '/login' && redirect !== '/register') {
-      window.location.assign(redirect)
+      // If there's a redirect parameter, use it
+      targetRoute = redirect
     } else {
-      window.location.assign('/forum')
+      // Otherwise, redirect based on role
+      if (auth.currentUser?.role === 'admin') {
+        targetRoute = '/admin' // Admin users go to admin dashboard
+      } else {
+        targetRoute = '/forum' // Regular users go to forum
+      }
     }
+
+    router.push(targetRoute)
   } catch (e) {
     error.value = e.message || 'Login failed'
+    loading.value = false
   }
 }
 </script>

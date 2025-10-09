@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { useFirebaseAuthStore } from '../stores/firebaseAuth'
 import ForumView from '../views/ForumView.vue'
 import LoginView from '../views/LoginView.vue'
 import MapView from '../views/MapView.vue'
@@ -46,12 +46,19 @@ const router = createRouter({
 
 // Route guards - implement role-based access control
 router.beforeEach((to, from, next) => {
-  const auth = useAuthStore()
-  
+  const auth = useFirebaseAuthStore()
+
+  // If user is logged in but tries to access login/register pages, redirect based on role
+  if (auth.isAuthenticated && (to.path === '/login' || to.path === '/register' || to.path === '/')) {
+    const defaultRoute = auth.currentUser?.role === 'admin' ? '/admin' : '/forum'
+    next(defaultRoute)
+    return
+  }
+
   // If page requires authentication
   if (to.meta.requiresAuth) {
     // Check if user is logged in
-    if (!auth.isAuthenticated()) {
+    if (!auth.isAuthenticated) {
       // Save the page user wanted to access
       next({
         path: '/login',
@@ -64,19 +71,14 @@ router.beforeEach((to, from, next) => {
     if (Array.isArray(to.meta.roles) && to.meta.roles.length > 0) {
       const userRole = auth.currentUser?.role
       if (!userRole || !to.meta.roles.includes(userRole)) {
-        // Not authorised for this route
-        next('/forum')
+        // Not authorised for this route - redirect based on role
+        const fallbackRoute = userRole === 'admin' ? '/admin' : '/forum'
+        next(fallbackRoute)
         return
       }
     }
   }
-  
-  // If user is logged in but tries to access login/register pages, redirect to forum
-  if (auth.isAuthenticated() && (to.path === '/login' || to.path === '/register')) {
-    next('/forum')
-    return
-  }
-  
+
   next()
 })
 
