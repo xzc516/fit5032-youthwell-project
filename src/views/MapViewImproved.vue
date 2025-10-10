@@ -135,33 +135,13 @@
             <h5 class="mb-0"><i class="fas fa-map me-2"></i>Map View</h5>
           </div>
           <div class="card-body p-0">
-            <!-- MapBox Integration Placeholder -->
-            <div id="map-container" class="map-placeholder">
-              <div v-if="!mapReady" class="map-setup-message">
-                <i class="fas fa-map-marked-alt fa-3x mb-3 text-muted"></i>
-                <h4>Map Setup Required</h4>
-                <p class="text-muted">
-                  To enable interactive maps, please configure MapBox:
-                </p>
-                <ol class="text-start">
-                  <li>Sign up at <a href="https://account.mapbox.com/auth/signup/" target="_blank">MapBox</a></li>
-                  <li>Get your access token</li>
-                  <li>Add token to <code>src/services/mapService.js</code></li>
-                </ol>
-                <p class="mt-3">
-                  <strong>Current Services:</strong>
-                </p>
-                <ul class="text-start list-unstyled">
-                  <li v-for="location in filteredLocations" :key="location.id" class="mb-2">
-                    <i class="fas fa-map-pin text-danger me-2"></i>
-                    <strong>{{ location.name }}</strong> - {{ location.address }}
-                  </li>
-                </ul>
-              </div>
-
-              <!-- Actual map will be rendered here when MapBox is configured -->
-              <div v-else id="mapbox-map" style="height: 600px;"></div>
-            </div>
+            <!-- Interactive MapBox Map -->
+            <MapBoxMap
+              :userLocation="userLocation"
+              :nearestService="nearestLocation"
+              :selectedService="selectedLocation"
+              @service-selected="selectLocation"
+            />
           </div>
         </div>
 
@@ -220,34 +200,24 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import MapBoxMap from '../components/MapBoxMap.vue'
 import {
   mentalHealthLocations,
   searchServices,
   getDirections,
-  findNearestService,
-  MAPBOX_TOKEN
+  findNearestService
 } from '../services/mapService'
 
 const searchQuery = ref('')
 const selectedServiceType = ref('')
 const selectedLocation = ref(null)
 const userLocation = ref(null)
+const nearestLocation = ref(null)
 const loadingLocation = ref(false)
 const directions = ref(null)
-const mapReady = ref(false)
 
 const filteredLocations = ref([...mentalHealthLocations])
-
-// Check if MapBox is configured
-onMounted(() => {
-  mapReady.value = MAPBOX_TOKEN !== 'YOUR_MAPBOX_ACCESS_TOKEN_HERE'
-
-  if (mapReady.value) {
-    // TODO: Initialize MapBox map here when token is configured
-    console.log('MapBox is configured and ready')
-  }
-})
 
 function filterServices() {
   let results = searchServices(searchQuery.value)
@@ -271,12 +241,16 @@ function useCurrentLocation() {
   if ('geolocation' in navigator) {
     navigator.geolocation.getCurrentPosition(
       position => {
-        userLocation.value = [position.coords.longitude, position.coords.latitude]
+        userLocation.value = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        }
         loadingLocation.value = false
 
         // Find nearest service
-        const nearest = findNearestService(userLocation.value)
+        const nearest = findNearestService([position.coords.longitude, position.coords.latitude])
         if (nearest) {
+          nearestLocation.value = nearest
           alert(`Nearest service: ${nearest.name} (${nearest.distance.toFixed(2)} km away)`)
           selectLocation(nearest)
         }
@@ -299,7 +273,8 @@ async function getDirectionsToLocation(location) {
     return
   }
 
-  const result = await getDirections(userLocation.value, location.coordinates)
+  const start = [userLocation.value.longitude, userLocation.value.latitude]
+  const result = await getDirections(start, location.coordinates)
 
   if (result) {
     directions.value = result

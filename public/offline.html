@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - YouthWell</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #333;
+    }
+
+    .offline-container {
+      background: white;
+      border-radius: 20px;
+      padding: 60px 40px;
+      max-width: 600px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .offline-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      opacity: 0.7;
+    }
+
+    h1 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 32px;
+    }
+
+    p {
+      color: #6c757d;
+      line-height: 1.6;
+      margin-bottom: 30px;
+      font-size: 16px;
+    }
+
+    .crisis-info {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 20px;
+      margin: 30px 0;
+      text-align: left;
+      border-radius: 8px;
+    }
+
+    .crisis-info h3 {
+      color: #856404;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    .crisis-info ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .crisis-info li {
+      color: #856404;
+      padding: 8px 0;
+      font-weight: 500;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 12px 30px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .features {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 30px;
+      text-align: left;
+    }
+
+    .features h3 {
+      color: #667eea;
+      margin-bottom: 15px;
+    }
+
+    .features ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .features li {
+      padding: 8px 0;
+      color: #495057;
+    }
+
+    .features li::before {
+      content: "✓ ";
+      color: #28a745;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #dc3545;
+      color: white;
+      border-radius: 20px;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .offline-container {
+        padding: 40px 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .offline-icon {
+        font-size: 60px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">📡</div>
+    <div class="status">● Offline Mode</div>
+    <h1>You're Currently Offline</h1>
+    <p>
+      No internet connection detected. Some features may be limited while offline,
+      but your assessment data will be saved locally and synced when you're back online.
+    </p>
+
+    <div class="crisis-info">
+      <h3>⚠️ Need Immediate Help?</h3>
+      <ul>
+        <li>📞 <strong>Lifeline:</strong> 13 11 14 (24/7 crisis support)</li>
+        <li>📞 <strong>Kids Helpline:</strong> 1800 55 1800 (ages 5-25)</li>
+        <li>📞 <strong>Beyond Blue:</strong> 1300 22 4636 (depression/anxiety)</li>
+        <li>🚨 <strong>Emergency:</strong> 000</li>
+      </ul>
+    </div>
+
+    <div class="features">
+      <h3>Available Offline Features:</h3>
+      <ul>
+        <li>Mental health self-assessments (PHQ-9, GAD-7)</li>
+        <li>View previously loaded resources</li>
+        <li>Read cached forum posts</li>
+        <li>Your data will sync automatically when reconnected</li>
+      </ul>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <a href="/" class="btn" onclick="window.location.reload(); return false;">
+        Try Again
+      </a>
+    </div>
+
+    <p style="margin-top: 30px; font-size: 14px; color: #adb5bd;">
+      Check your internet connection and try refreshing the page.
+    </p>
+  </div>
+
+  <script>
+    // Auto-reload when connection is restored
+    window.addEventListener('online', () => {
+      window.location.reload()
+    })
+
+    // Check connection status
+    setInterval(() => {
+      if (navigator.onLine) {
+        window.location.reload()
+      }
+    }, 5000)
+  </script>
+</body>
+</html>

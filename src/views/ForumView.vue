@@ -18,35 +18,50 @@
         <form class="row g-3" @submit.prevent="submitPost">
           <div class="col-12 col-md-6">
             <label class="form-label fw-bold">Title</label>
-            <input 
-              v-model.trim="form.title" 
-              type="text" 
-              class="form-control" 
-              :class="{'is-invalid': errors.title}" 
-              placeholder="Enter title (3-50 characters)" 
+            <input
+              v-model.trim="form.title"
+              type="text"
+              class="form-control"
+              :class="{'is-invalid': errors.title}"
+              placeholder="Enter title (3-50 characters)"
             />
             <div class="invalid-feedback">{{ errors.title }}</div>
           </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-bold">Category</label>
+            <select v-model="form.category" class="form-select" :class="{'is-invalid': errors.category}">
+              <option value="">Select a category...</option>
+              <option value="anxiety">Anxiety</option>
+              <option value="depression">Depression</option>
+              <option value="stress">Stress & Pressure</option>
+              <option value="relationships">Relationships</option>
+              <option value="school">School & Study</option>
+              <option value="family">Family Issues</option>
+              <option value="self-esteem">Self-Esteem</option>
+              <option value="general">General Support</option>
+            </select>
+            <div class="invalid-feedback">{{ errors.category }}</div>
+          </div>
           <div class="col-12">
             <label class="form-label fw-bold">Content</label>
-            <textarea 
-              v-model.trim="form.summary" 
-              class="form-control" 
-              rows="4" 
-              :class="{'is-invalid': errors.summary}" 
+            <textarea
+              v-model.trim="form.summary"
+              class="form-control"
+              rows="4"
+              :class="{'is-invalid': errors.summary}"
               placeholder="Share your thoughts, experiences, or advice (minimum 10 characters)"
             ></textarea>
             <div class="invalid-feedback">{{ errors.summary }}</div>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label fw-bold">Your Rating (1-5)</label>
-            <input 
-              v-model.number="form.rating" 
-              type="number" 
-              min="1" 
-              max="5" 
-              class="form-control" 
-              :class="{'is-invalid': errors.rating}" 
+            <input
+              v-model.number="form.rating"
+              type="number"
+              min="1"
+              max="5"
+              class="form-control"
+              :class="{'is-invalid': errors.rating}"
             />
             <div class="invalid-feedback">{{ errors.rating }}</div>
           </div>
@@ -59,21 +74,49 @@
       </div>
     </div>
 
-    <!-- Posts List -->
-    <div class="row">
-      <div class="col-12">
-        <h3 class="text-white mb-4">
-          <i class="fas fa-list me-2"></i>Recent Posts
+    <!-- Category Filter -->
+    <div class="row mb-4">
+      <div class="col-md-8">
+        <h3 class="text-white mb-3">
+          <i class="fas fa-list me-2"></i>Community Posts
         </h3>
       </div>
+      <div class="col-md-4">
+        <select v-model="selectedCategory" class="form-select form-select-lg">
+          <option value="all">All Categories</option>
+          <option value="anxiety">Anxiety</option>
+          <option value="depression">Depression</option>
+          <option value="stress">Stress & Pressure</option>
+          <option value="relationships">Relationships</option>
+          <option value="school">School & Study</option>
+          <option value="family">Family Issues</option>
+          <option value="self-esteem">Self-Esteem</option>
+          <option value="general">General Support</option>
+        </select>
+      </div>
     </div>
-    
+
+    <!-- Professional Monitoring Notice -->
+    <div class="alert alert-info mb-4">
+      <i class="bi bi-shield-check me-2"></i>
+      <strong>Safe Space:</strong> This forum is monitored by mental health professionals.
+      Share your experiences with the community.
+    </div>
+
     <div class="row g-4">
-      <div v-for="post in posts" :key="post.id" class="col-12 col-lg-6">
+      <div v-for="post in filteredPosts" :key="post.id" class="col-12 col-lg-6">
         <div class="card post-card h-100 shadow" @click="openPost(post)" style="cursor: pointer;">
           <div class="card-body">
-            <h5 class="card-title text-primary">{{ post.title }}</h5>
-            <p class="card-text">{{ post.summary }}</p>
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h5 class="card-title text-primary mb-0">{{ post.title }}</h5>
+            </div>
+            <div class="mb-2">
+              <span class="badge bg-info">{{ getCategoryLabel(post.category) }}</span>
+              <small class="text-muted ms-2">
+                by {{ post.author }}
+              </small>
+            </div>
+            <p class="card-text">{{ truncateText(post.summary, 150) }}</p>
             <div class="rating-section">
               <label class="form-label fw-bold">Rate this post:</label>
               <div class="rating-stars">
@@ -98,6 +141,13 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- No Posts Message -->
+    <div v-if="filteredPosts.length === 0" class="text-center text-white py-5">
+      <i class="bi bi-chat-x fs-1 mb-3"></i>
+      <h4>No posts found in this category</h4>
+      <p>Be the first to share in this category!</p>
     </div>
 
     <!-- Post Detail Modal -->
@@ -158,10 +208,29 @@ import {
 const auth = useFirebaseAuthStore()
 const forumStore = useForumStore()
 const posts = computed(() => forumStore.sortedPosts)
-const form = ref({ title: '', summary: '', rating: 3 })
-const errors = ref({ title: '', summary: '', rating: '' })
+const form = ref({ title: '', summary: '', rating: 3, category: '' })
+const errors = ref({ title: '', summary: '', rating: '', category: '' })
 const selectedPost = ref(null)
 const postModal = ref(null)
+const selectedCategory = ref('all')
+
+const categoryLabels = {
+  anxiety: 'Anxiety',
+  depression: 'Depression',
+  stress: 'Stress & Pressure',
+  relationships: 'Relationships',
+  school: 'School & Study',
+  family: 'Family Issues',
+  'self-esteem': 'Self-Esteem',
+  general: 'General Support'
+}
+
+const filteredPosts = computed(() => {
+  if (selectedCategory.value === 'all') {
+    return posts.value
+  }
+  return posts.value.filter(post => post.category === selectedCategory.value)
+})
 
 // Content sanitization function - prevents XSS attacks
 function sanitizeContent(content) {
@@ -257,37 +326,52 @@ async function ratePost(id, value) {
   }
 }
 
+function getCategoryLabel(category) {
+  return categoryLabels[category] || 'General'
+}
+
+function truncateText(text, length) {
+  if (!text) return ''
+  return text.length > length ? text.substring(0, length) + '...' : text
+}
+
 function validate() {
-  errors.value = { title: '', summary: '', rating: '' }
-  
+  errors.value = { title: '', summary: '', rating: '', category: '' }
+
   // Validate title
   errors.value.title = validateInput(form.value.title, 'title')
-  
+
   // Validate content
   errors.value.summary = validateInput(form.value.summary, 'summary')
-  
+
   // Validate rating
   errors.value.rating = validateInput(form.value.rating, 'rating')
-  
-  return !errors.value.title && !errors.value.summary && !errors.value.rating
+
+  // Validate category
+  if (!form.value.category) {
+    errors.value.category = 'Please select a category'
+  }
+
+  return !errors.value.title && !errors.value.summary && !errors.value.rating && !errors.value.category
 }
 
 async function submitPost() {
   if (!validate()) return
 
   try {
-    const author = auth.currentUser?.username || 'Anonymous'
+    const author = auth.currentUser?.username || 'User'
     const authorId = auth.currentUser?.uid || 'anonymous'
 
     await forumStore.createPost({
       title: form.value.title,
       summary: form.value.summary,
       rating: form.value.rating,
+      category: form.value.category,
       author,
       authorId
     })
 
-    form.value = { title: '', summary: '', rating: 3 }
+    form.value = { title: '', summary: '', rating: 3, category: '' }
 
     // Show success message
     alert('Post published successfully!')

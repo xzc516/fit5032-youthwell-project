@@ -9,8 +9,8 @@
  * Alternative: Mapify (https://www.mapify.ai/)
  */
 
-// TODO: Replace with your MapBox access token
-export const MAPBOX_TOKEN = 'YOUR_MAPBOX_ACCESS_TOKEN_HERE'
+// MapBox access token configured
+export const MAPBOX_TOKEN = 'pk.eyJ1IjoibWVyY3VyeTA1MTYiLCJhIjoiY21nanh3ZW54MG5sejJqbXo3MGplY3RiNiJ9.fD5qndG654WO3dY0V3FCQw'
 
 /**
  * Initialize map configuration

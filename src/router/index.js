@@ -1,17 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useFirebaseAuthStore } from '../stores/firebaseAuth'
+import HomeView from '../views/HomeView.vue'
 import ForumView from '../views/ForumView.vue'
 import LoginView from '../views/LoginView.vue'
-import MapView from '../views/MapView.vue'
+import MapViewImproved from '../views/MapViewImproved.vue'
 import RegisterView from '../views/RegisterView.vue'
 import AdminDashboardView from '../views/AdminDashboardView.vue'
+import AdminDashboardEnhanced from '../views/AdminDashboardEnhanced.vue'
+import AssessmentView from '../views/AssessmentView.vue'
+import ResourcesView from '../views/ResourcesView.vue'
+import DashboardView from '../views/DashboardView.vue'
+import ChatbotView from '../views/ChatbotView.vue'
+import AppointmentView from '../views/AppointmentView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      redirect: '/forum'
+      redirect: '/home'
+    },
+    {
+      path: '/home',
+      name: 'home',
+      component: HomeView
     },
     {
       path: '/forum',
@@ -20,16 +32,46 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['user', 'admin'] }
     },
     {
+      path: '/assessment',
+      name: 'assessment',
+      component: AssessmentView,
+      meta: { requiresAuth: true, roles: ['user', 'admin'] }
+    },
+    {
+      path: '/resources',
+      name: 'resources',
+      component: ResourcesView,
+      meta: { requiresAuth: true, roles: ['user', 'admin'] }
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: DashboardView,
+      meta: { requiresAuth: true, roles: ['user', 'admin'] }
+    },
+    {
       path: '/map',
       name: 'map',
-      component: MapView,
+      component: MapViewImproved,
       meta: { requiresAuth: true, roles: ['user', 'admin'] }
     },
     {
       path: '/admin',
       name: 'admin',
-      component: AdminDashboardView,
+      component: AdminDashboardEnhanced,
       meta: { requiresAuth: true, roles: ['admin'] }
+    },
+    {
+      path: '/chatbot',
+      name: 'chatbot',
+      component: ChatbotView,
+      meta: { requiresAuth: true, roles: ['user', 'admin'] }
+    },
+    {
+      path: '/appointments',
+      name: 'appointments',
+      component: AppointmentView,
+      meta: { requiresAuth: true, roles: ['user', 'admin'] }
     },
     {
       path: '/login',
@@ -45,8 +87,13 @@ const router = createRouter({
 })
 
 // Route guards - implement role-based access control
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const auth = useFirebaseAuthStore()
+
+  // Wait for Firebase Auth to initialize (only on first navigation)
+  if (!auth.isInitialized) {
+    await auth.initAuth()
+  }
 
   // If user is logged in but tries to access login/register pages, redirect based on role
   if (auth.isAuthenticated && (to.path === '/login' || to.path === '/register' || to.path === '/')) {
