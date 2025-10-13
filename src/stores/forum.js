@@ -110,7 +110,7 @@ export const useForumStore = defineStore('forum', {
     },
 
     // Create new post
-    async createPost({ title, summary, rating, author, authorId }) {
+    async createPost({ title, summary, rating, category, author, authorId }) {
       this.loading = true
       this.error = null
 
@@ -129,10 +129,18 @@ export const useForumStore = defineStore('forum', {
 
         const validRating = Math.max(1, Math.min(5, parseInt(rating) || 3))
 
+        // Validate category
+        const validCategories = ['anxiety', 'depression', 'stress', 'relationships', 'school', 'family', 'self-esteem', 'general']
+        const validCategory = validCategories.includes(category) ? category : 'general'
+
+        console.log('Received category:', category)
+        console.log('Valid category:', validCategory)
+
         // Create post document
         const postData = {
           title: cleanTitle,
           summary: cleanSummary,
+          category: validCategory,
           author: sanitizeContent(author || 'Anonymous'),
           authorId: authorId || 'anonymous',
           ratings: [

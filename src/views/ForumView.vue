@@ -362,6 +362,8 @@ async function submitPost() {
     const author = auth.currentUser?.username || 'User'
     const authorId = auth.currentUser?.uid || 'anonymous'
 
+    console.log('Submitting post with category:', form.value.category)
+
     await forumStore.createPost({
       title: form.value.title,
       summary: form.value.summary,

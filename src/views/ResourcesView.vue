@@ -126,7 +126,7 @@ const resources = [
     icon: 'book',
     color: 'info',
     type: 'link',
-    url: 'https://www.headspace.org.au/explore-topics/for-young-people/stress/',
+    url: 'https://www.beyondblue.org.au/mental-health/stress',
     tags: ['Stress', 'Guide']
   },
 
@@ -140,7 +140,7 @@ const resources = [
     icon: 'flower1',
     color: 'success',
     type: 'link',
-    url: 'https://www.smashingthestigma.org.au/mindfulness',
+    url: 'https://www.healthdirect.gov.au/mindfulness-and-meditation',
     tags: ['Mindfulness', 'Meditation', 'Practice']
   },
   {
@@ -152,7 +152,6 @@ const resources = [
     icon: 'wind',
     color: 'primary',
     type: 'download',
-    url: '#',
     tags: ['Breathing', 'Relaxation', 'Quick Help']
   },
   {
@@ -164,7 +163,6 @@ const resources = [
     icon: 'moon-stars',
     color: 'secondary',
     type: 'download',
-    url: '#',
     tags: ['Sleep', 'Wellbeing']
   },
   {
@@ -176,7 +174,6 @@ const resources = [
     icon: 'journal-text',
     color: 'warning',
     type: 'download',
-    url: '#',
     tags: ['CBT', 'Worksheet', 'Thoughts']
   },
 
@@ -190,7 +187,7 @@ const resources = [
     icon: 'play-circle',
     color: 'danger',
     type: 'link',
-    url: 'https://www.youtube.com/@headspaceAustralia',
+    url: 'https://headspace.org.au/',
     tags: ['Video', 'Education', 'Youth']
   },
   {
@@ -216,7 +213,6 @@ const resources = [
     icon: 'file-earmark-text',
     color: 'primary',
     type: 'download',
-    url: '#',
     tags: ['Template', 'Planning', 'Self-help']
   },
   {
@@ -228,7 +224,6 @@ const resources = [
     icon: 'calendar-heart',
     color: 'success',
     type: 'download',
-    url: '#',
     tags: ['Tracking', 'Journal', 'Self-awareness']
   },
   {
@@ -240,7 +235,6 @@ const resources = [
     icon: 'shield-check',
     color: 'danger',
     type: 'download',
-    url: '#',
     tags: ['Crisis', 'Safety', 'Planning']
   },
   {
@@ -252,7 +246,6 @@ const resources = [
     icon: 'heart',
     color: 'warning',
     type: 'download',
-    url: '#',
     tags: ['Self-care', 'Checklist', 'Wellbeing']
   },
 
@@ -278,7 +271,6 @@ const resources = [
     icon: 'hospital',
     color: 'danger',
     type: 'download',
-    url: '#',
     tags: ['Emergency', 'Hospital', 'Guide']
   },
   {
@@ -290,7 +282,7 @@ const resources = [
     icon: 'people',
     color: 'warning',
     type: 'link',
-    url: 'https://www.lifeline.org.au/resources/supporting-someone-in-crisis/',
+    url: 'https://www.beyondblue.org.au/mental-health/supporting-someone',
     tags: ['Support', 'Friend', 'Crisis']
   },
 
@@ -304,7 +296,6 @@ const resources = [
     icon: 'mortarboard',
     color: 'info',
     type: 'download',
-    url: '#',
     tags: ['Study', 'Stress', 'Academic']
   },
   {
@@ -316,7 +307,7 @@ const resources = [
     icon: 'chat-heart',
     color: 'success',
     type: 'link',
-    url: 'https://www.headspace.org.au/explore-topics/for-young-people/social-connection/',
+    url: 'https://www.beyondblue.org.au/mental-health/staying-well/social-connection',
     tags: ['Social', 'Connection', 'Relationships']
   },
   {
@@ -328,7 +319,7 @@ const resources = [
     icon: 'person-check',
     color: 'primary',
     type: 'link',
-    url: 'https://www.eatingdisorders.org.au/body-image',
+    url: 'https://www.nedc.com.au/eating-disorders/eating-disorders-explained/body-image/',
     tags: ['Body Image', 'Self-esteem', 'Identity']
   },
   {
@@ -340,7 +331,6 @@ const resources = [
     icon: 'phone',
     color: 'info',
     type: 'download',
-    url: '#',
     tags: ['Digital', 'Screen Time', 'Social Media']
   }
 ]
@@ -368,12 +358,595 @@ const filteredResources = computed(() => {
 
 function openResource(resource) {
   if (resource.type === 'download') {
-    // Simulate download
-    alert(`Downloading: ${resource.title}\n\nNote: In production, this would download a PDF file with the resource content.`)
+    // Generate and download PDF file
+    downloadResourcePDF(resource)
   } else {
     // Open external link
     window.open(resource.url, '_blank', 'noopener,noreferrer')
   }
+}
+
+function downloadResourcePDF(resource) {
+  // Create text content for the resource
+  const textContent = generateTextContent(resource)
+
+  // Create blob and download as PDF
+  const blob = new Blob([textContent], { type: 'text/plain' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `${resource.title.replace(/\s+/g, '_')}_YouthWell.txt`
+
+  // Append to body, click, and remove
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  // Clean up
+  setTimeout(() => URL.revokeObjectURL(link.href), 100)
+}
+
+function generateTextContent(resource) {
+  const title = resource.title
+  const description = resource.description
+  const category = resource.category
+
+  let content = `
+================================================================================
+${title.toUpperCase()}
+================================================================================
+
+Category: ${category}
+Downloaded from: YouthWell Mental Health Platform
+Date: ${new Date().toLocaleDateString()}
+
+${description}
+
+--------------------------------------------------------------------------------
+`
+
+  // Add specific content based on resource ID
+  switch(resource.id) {
+    case 5: // Breathing Exercises
+      content = `
+BREATHING EXERCISES FOR ANXIETY AND STRESS RELIEF
+
+1. Box Breathing (4-4-4-4 Technique)
+   - Breathe in for 4 seconds
+   - Hold for 4 seconds
+   - Breathe out for 4 seconds
+   - Hold for 4 seconds
+   - Repeat 4-5 times
+
+2. Deep Belly Breathing
+   - Place one hand on your chest, one on your belly
+   - Breathe in deeply through your nose (belly rises)
+   - Breathe out slowly through your mouth
+   - Repeat for 5 minutes
+
+3. 4-7-8 Breathing
+   - Breathe in through nose for 4 seconds
+   - Hold breath for 7 seconds
+   - Exhale completely through mouth for 8 seconds
+   - Repeat 3-4 cycles
+
+When to use: During panic attacks, before sleep, or when feeling overwhelmed.
+
+EMERGENCY CONTACTS:
+- Lifeline: 13 11 14 (24/7)
+- Kids Helpline: 1800 55 1800
+- Emergency: 000`
+      break
+
+    case 6: // Sleep Hygiene
+      content = `
+SLEEP HYGIENE TIPS FOR BETTER MENTAL HEALTH
+
+BEFORE BED (1-2 HOURS):
+□ No screens (phone, TV, computer)
+□ Dim the lights
+□ Avoid caffeine and heavy meals
+□ Try relaxation exercises
+
+BEDROOM ENVIRONMENT:
+□ Keep room cool (18-20°C)
+□ Use comfortable bedding
+□ Minimize noise and light
+□ Reserve bed for sleep only
+
+DAILY HABITS:
+□ Wake up same time every day
+□ Get morning sunlight
+□ Exercise regularly (not before bed)
+□ Limit daytime naps (20 min max)
+
+RELAXATION TECHNIQUES:
+• Progressive muscle relaxation
+• Guided meditation
+• Reading (paper books)
+• Listening to calm music
+
+If sleep problems persist for 2+ weeks, consult a healthcare professional.
+
+YouthWell Mental Health Platform
+www.youthwell.com.au`
+      break
+
+    case 7: // Thought Challenging Worksheet
+      content = `
+THOUGHT CHALLENGING WORKSHEET (CBT)
+
+SITUATION:
+What happened? Where were you? Who was there?
+_________________________________________________
+_________________________________________________
+
+AUTOMATIC THOUGHT:
+What went through your mind?
+_________________________________________________
+_________________________________________________
+
+EMOTIONS:
+What did you feel? Rate intensity (0-10):
+_________________________________________________
+
+EVIDENCE FOR THE THOUGHT:
+What supports this thought?
+_________________________________________________
+_________________________________________________
+
+EVIDENCE AGAINST THE THOUGHT:
+What doesn't support this thought?
+_________________________________________________
+_________________________________________________
+
+ALTERNATIVE THOUGHT:
+More balanced perspective:
+_________________________________________________
+_________________________________________________
+
+NEW EMOTION:
+How do you feel now? Rate intensity (0-10):
+_________________________________________________
+
+COMMON THINKING TRAPS:
+• All-or-nothing thinking
+• Overgeneralization
+• Mental filter (focusing on negatives)
+• Catastrophizing
+• Emotional reasoning
+
+Practice this daily for best results!`
+      break
+
+    case 10: // Mental Health Action Plan
+      content = `
+MENTAL HEALTH ACTION PLAN
+
+MY EARLY WARNING SIGNS:
+1. _____________________________________________
+2. _____________________________________________
+3. _____________________________________________
+
+HELPFUL COPING STRATEGIES:
+1. _____________________________________________
+2. _____________________________________________
+3. _____________________________________________
+
+PEOPLE I CAN TALK TO:
+Name: _________________ Phone: _______________
+Name: _________________ Phone: _______________
+Name: _________________ Phone: _______________
+
+PROFESSIONAL SUPPORTS:
+GP: ___________________ Phone: _______________
+Therapist: _____________ Phone: _______________
+Psychiatrist: ___________ Phone: _______________
+
+EMERGENCY CONTACTS:
+• Lifeline: 13 11 14
+• Kids Helpline: 1800 55 1800
+• Emergency: 000
+
+TRIGGERS TO AVOID:
+_________________________________________________
+_________________________________________________
+
+SELF-CARE ACTIVITIES:
+□ Exercise    □ Creative activities    □ Social time
+□ Sleep       □ Healthy eating         □ Meditation
+□ Other: ______________________________________
+
+Review this plan monthly and update as needed.`
+      break
+
+    case 11: // Mood Tracking Journal
+      content = `
+MOOD TRACKING JOURNAL
+
+HOW TO USE:
+Track your mood daily to identify patterns and triggers.
+Rate your mood: 1 (Very Low) to 10 (Excellent)
+
+WEEK 1:
+Monday    Mood: ___  Sleep: ___ hrs  Activities: _______
+Tuesday   Mood: ___  Sleep: ___ hrs  Activities: _______
+Wednesday Mood: ___  Sleep: ___ hrs  Activities: _______
+Thursday  Mood: ___  Sleep: ___ hrs  Activities: _______
+Friday    Mood: ___  Sleep: ___ hrs  Activities: _______
+Saturday  Mood: ___  Sleep: ___ hrs  Activities: _______
+Sunday    Mood: ___  Sleep: ___ hrs  Activities: _______
+
+WEEKLY REFLECTION:
+Patterns noticed: _________________________________
+Best day: ________________________________________
+Challenging day: __________________________________
+What helped: _____________________________________
+
+MOOD TRACKING TIPS:
+• Rate mood at same time each day
+• Note significant events
+• Track sleep, exercise, social contact
+• Look for patterns over 4+ weeks
+• Share with healthcare provider
+
+Continue tracking for at least 4-6 weeks for meaningful insights.`
+      break
+
+    case 12: // Crisis Safety Plan
+      content = `
+CRISIS SAFETY PLAN
+
+⚠️ USE THIS WHEN FEELING UNSAFE OR IN CRISIS
+
+STEP 1: WARNING SIGNS
+I know I'm in crisis when I:
+□ _____________________________________________
+□ _____________________________________________
+□ _____________________________________________
+
+STEP 2: INTERNAL COPING STRATEGIES
+Things I can do on my own:
+□ _____________________________________________
+□ _____________________________________________
+□ _____________________________________________
+
+STEP 3: PEOPLE WHO CAN HELP
+Contact these people:
+1. Name: ______________ Phone: _______________
+2. Name: ______________ Phone: _______________
+3. Name: ______________ Phone: _______________
+
+STEP 4: SAFE PLACES
+Places I can go:
+_________________________________________________
+_________________________________________________
+
+STEP 5: PROFESSIONAL HELP
+GP: ______________________ Phone: _____________
+Mental Health Service: _______ Phone: _____________
+
+STEP 6: EMERGENCY SERVICES
+☎ Lifeline: 13 11 14 (24/7 crisis support)
+☎ Kids Helpline: 1800 55 1800 (ages 5-25)
+☎ Emergency: 000
+☎ Suicide Call Back Service: 1300 659 467
+
+MAKING ENVIRONMENT SAFER:
+Remove or secure: _______________________________
+Ask someone to keep: ____________________________
+
+Keep this plan accessible at all times.
+Share with trusted person.`
+      break
+
+    case 13: // Self-Care Checklist
+      content = `
+SELF-CARE CHECKLIST
+
+DAILY SELF-CARE:
+Physical:
+□ 7-9 hours sleep
+□ 3 healthy meals
+□ 30 min physical activity
+□ Shower/personal hygiene
+□ Take medications (if prescribed)
+
+Emotional:
+□ Check in with feelings
+□ Practice gratitude
+□ Do something enjoyable
+□ Connect with someone
+□ Set boundaries when needed
+
+Mental:
+□ Limit news/social media
+□ Practice mindfulness
+□ Learn something new
+□ Creative expression
+□ Problem-solve one thing
+
+WEEKLY SELF-CARE:
+□ Quality time with friends/family
+□ Pursue a hobby
+□ Spend time in nature
+□ Do something fun
+□ Review and plan week
+□ Clean/organize space
+□ Meal prep for week
+
+MONTHLY SELF-CARE:
+□ Review goals and progress
+□ Try something new
+□ Self-reflection
+□ Healthcare check-ups
+□ Budget review
+□ Update self-care plan
+
+REMEMBER:
+• Self-care is not selfish
+• Small actions count
+• Be flexible with yourself
+• Ask for help when needed
+
+What self-care will you prioritize today?`
+      break
+
+    case 15: // Emergency Department Guide
+      content = `
+EMERGENCY DEPARTMENT GUIDE FOR MENTAL HEALTH
+
+WHEN TO GO TO ED:
+• Thoughts of suicide with a plan
+• Self-harm that needs medical attention
+• Psychosis or severe confusion
+• Unable to care for yourself
+• Immediate danger to self/others
+
+WHAT TO BRING:
+□ ID and Medicare card
+□ List of medications
+□ Contact for support person
+□ This safety plan
+□ Phone charger
+
+WHAT TO EXPECT:
+1. Triage Assessment (immediate)
+   - Brief evaluation of urgency
+   - Vital signs checked
+
+2. Waiting Period (varies)
+   - May wait several hours
+   - Bring items for comfort
+
+3. Medical Assessment
+   - Physical health check
+   - Blood tests if needed
+
+4. Mental Health Assessment
+   - Detailed interview
+   - Risk assessment
+   - Treatment options discussed
+
+5. Possible Outcomes:
+   - Discharge with follow-up plan
+   - Crisis team support
+   - Admission to psychiatric unit
+
+YOUR RIGHTS:
+✓ Respectful treatment
+✓ Privacy and confidentiality
+✓ Have support person present
+✓ Ask questions
+✓ Second opinion
+
+AFTER ED VISIT:
+- Follow-up with GP within 48 hours
+- Continue safety plan
+- Take prescribed medications
+- Attend follow-up appointments
+
+ALTERNATIVES TO ED:
+• Mental Health Crisis Line
+• GP urgent appointment
+• Community mental health team
+• Safe Space programs
+
+ALWAYS CALL 000 FOR LIFE-THREATENING EMERGENCIES`
+      break
+
+    case 17: // Study Stress Management
+      content = `
+STUDY STRESS MANAGEMENT GUIDE
+
+BEFORE EXAMS (1-2 WEEKS):
+□ Create study schedule
+□ Break material into chunks
+□ Use active learning methods
+□ Form study group
+□ Prioritize sleep
+□ Eat nutritious meals
+
+STUDY TECHNIQUES:
+• Pomodoro: 25 min study, 5 min break
+• Spaced repetition
+• Practice questions
+• Teach someone else
+• Mind mapping
+• Flashcards
+
+MANAGING EXAM ANXIETY:
+Before Exam:
+- Arrive early but not too early
+- Use breathing exercises
+- Positive self-talk
+- Review main points only
+
+During Exam:
+- Read all instructions carefully
+- Start with easy questions
+- If stuck, move on
+- Use time wisely
+- Deep breaths if anxious
+
+STUDY BREAKS (EVERY HOUR):
+□ Stretch or walk
+□ Drink water
+□ Healthy snack
+□ Social media (5 min max)
+□ Fresh air
+
+AVOID:
+✗ All-nighters (decrease performance)
+✗ Too much caffeine
+✗ Comparing to others
+✗ Cramming everything last minute
+✗ Skipping meals
+
+SIGNS YOU NEED HELP:
+• Can't concentrate despite trying
+• Physical symptoms (headaches, stomach)
+• Panic attacks
+• Sleep problems for 1+ weeks
+• Persistent negative thoughts
+
+SUPPORT SERVICES:
+- University counseling (free)
+- Student support services
+- Academic advisors
+- Peer support groups
+
+Remember: One exam doesn't define your worth!`
+      break
+
+    case 20: // Digital Wellbeing Guide
+      content = `
+DIGITAL WELLBEING GUIDE
+
+SCREEN TIME GUIDELINES:
+Ages 13-17: Max 2 hours recreational
+Ages 18+: Be mindful of quality over quantity
+
+HEALTHY HABITS:
+□ No phones 1 hour before bed
+□ No phones during meals
+□ Turn off non-essential notifications
+□ Use grayscale mode (reduces appeal)
+□ Delete apps you don't use
+□ Set daily time limits
+
+SOCIAL MEDIA TIPS:
+Do:
+✓ Follow accounts that inspire you
+✓ Take breaks (1 week minimum annually)
+✓ Use "mute" for negative content
+✓ Curate your feed intentionally
+✓ Post mindfully
+
+Don't:
+✗ Compare yourself to others
+✗ Engage with trolls
+✗ Doomscroll news feeds
+✗ Check first thing in morning
+✗ Use as only social connection
+
+PHONE-FREE ZONES:
+• Bedroom (charge outside)
+• Dining table
+• Bathroom
+• First hour after waking
+• Last hour before bed
+
+DIGITAL DETOX CHALLENGE:
+Week 1: Delete one unused app daily
+Week 2: No phone during meals
+Week 3: Phone-free mornings (until 9am)
+Week 4: Social media weekend break
+
+WARNING SIGNS:
+• Checking phone 50+ times/day
+• Anxiety without phone
+• Losing sleep due to screens
+• Declining real-life relationships
+• FOMO (Fear of Missing Out)
+
+ALTERNATIVES TO SCROLLING:
+• Read a book
+• Call/visit friend
+• Exercise or walk
+• Creative hobby
+• Meditation
+• Journal writing
+
+YOUR WELLBEING > LIKES & FOLLOWS
+
+Set boundaries that work for YOU.`
+      break
+
+    default:
+      content = `
+${title.toUpperCase()}
+
+${description}
+
+This resource provides evidence-based information and practical strategies
+for managing mental health and wellbeing.
+
+For more information and support:
+- YouthWell Platform: www.youthwell.com.au
+- Lifeline: 13 11 14 (24/7 crisis support)
+- Kids Helpline: 1800 55 1800 (ages 5-25)
+- Beyond Blue: 1300 22 4636
+
+Remember: It's okay to ask for help.
+You don't have to go through this alone.`
+  }
+
+  content += `
+
+================================================================================
+EMERGENCY CONTACTS (24/7 Support)
+================================================================================
+
+Lifeline Australia
+Phone: 13 11 14
+Website: www.lifeline.org.au
+24/7 crisis support and suicide prevention
+
+Kids Helpline (Ages 5-25)
+Phone: 1800 55 1800
+Website: www.kidshelpline.com.au
+Free, private and confidential counselling
+
+Beyond Blue
+Phone: 1300 22 4636
+Website: www.beyondblue.org.au
+Support for depression, anxiety and suicide prevention
+
+Emergency Services
+Phone: 000
+For life-threatening emergencies
+
+Suicide Call Back Service
+Phone: 1300 659 467
+24/7 telephone and online counselling
+
+MensLine Australia
+Phone: 1300 78 99 78
+24/7 support for men
+
+QLife (LGBTIQ+ Support)
+Phone: 1800 184 527
+Daily 3pm-midnight
+
+================================================================================
+
+This resource is provided by YouthWell Mental Health Platform.
+For more resources and support, visit: www.youthwell.com.au
+
+© ${new Date().getFullYear()} YouthWell - Youth Mental Health & Wellbeing Platform
+`
+
+  return content
 }
 </script>
 
