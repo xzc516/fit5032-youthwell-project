@@ -42,29 +42,29 @@ onMounted(() => {
   try {
     mapboxgl.accessToken = MAPBOX_TOKEN
 
-    // 初始化地图
+    // Initialize map
     map = new mapboxgl.Map({
       container: mapContainer.value,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [144.9631, -37.8136], // Melbourne中心
+      center: [144.9631, -37.8136], // Melbourne center
       zoom: 12
     })
 
     console.log('Map initialized successfully')
 
-    // 添加导航控件（缩放、旋转）
+    // Add navigation controls (zoom, rotate)
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')
 
-    // 添加全屏控件
+    // Add fullscreen control
     map.addControl(new mapboxgl.FullscreenControl(), 'top-right')
 
-    // 地图加载完成后添加服务标记
+    // Add service markers after map loads
     map.on('load', () => {
       console.log('Map loaded successfully')
       addServiceMarkers()
     })
 
-    // 错误处理
+    // Error handling
     map.on('error', (e) => {
       console.error('Map error:', e)
     })
@@ -73,10 +73,10 @@ onMounted(() => {
   }
 })
 
-// 添加服务标记
+// Add service markers
 function addServiceMarkers() {
   mentalHealthLocations.forEach(location => {
-    // 创建标记元素
+    // Create marker element
     const el = document.createElement('div')
     el.className = 'custom-marker'
     el.style.backgroundColor = '#0d6efd'
@@ -87,7 +87,7 @@ function addServiceMarkers() {
     el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)'
     el.style.cursor = 'pointer'
 
-    // 添加图标
+    // Add icon
     const icon = document.createElement('i')
     icon.className = 'bi bi-hospital-fill'
     icon.style.color = 'white'
@@ -98,7 +98,7 @@ function addServiceMarkers() {
     icon.style.transform = 'translate(-50%, -50%)'
     el.appendChild(icon)
 
-    // 创建弹出框
+    // Create popup
     const popup = new mapboxgl.Popup({
       offset: 25,
       closeButton: true,
@@ -134,7 +134,7 @@ function addServiceMarkers() {
       </div>
     `)
 
-    // 创建标记
+    // Create marker
     const marker = new mapboxgl.Marker(el)
       .setLngLat(location.coordinates)
       .setPopup(popup)
@@ -142,22 +142,22 @@ function addServiceMarkers() {
 
     markers.push({ marker, location })
 
-    // 点击标记触发事件
+    // Click marker to trigger event
     el.addEventListener('click', () => {
       emit('service-selected', location)
     })
   })
 }
 
-// 监听用户位置变化
+// Watch user location changes
 watch(() => props.userLocation, (newLocation) => {
   if (newLocation && map) {
-    // 移除旧的用户标记
+    // Remove old user marker
     if (userMarker) {
       userMarker.remove()
     }
 
-    // 创建用户位置标记
+    // Create user location marker
     const el = document.createElement('div')
     el.className = 'user-marker'
     el.style.backgroundColor = '#dc3545'
@@ -176,7 +176,7 @@ watch(() => props.userLocation, (newLocation) => {
       )
       .addTo(map)
 
-    // 飞到用户位置
+    // Fly to user location
     map.flyTo({
       center: [newLocation.longitude, newLocation.latitude],
       zoom: 13,
@@ -185,10 +185,10 @@ watch(() => props.userLocation, (newLocation) => {
   }
 })
 
-// 监听最近服务变化
+// Watch nearest service changes
 watch(() => props.nearestService, (newService) => {
   if (newService && map) {
-    // 高亮最近的服务
+    // Highlight nearest service
     markers.forEach(({ marker, location }) => {
       const el = marker.getElement()
       if (location.id === newService.id) {
@@ -199,7 +199,7 @@ watch(() => props.nearestService, (newService) => {
       }
     })
 
-    // 飞到最近服务
+    // Fly to nearest service
     map.flyTo({
       center: newService.coordinates,
       zoom: 14,
@@ -217,7 +217,7 @@ watch(() => props.nearestService, (newService) => {
   background-color: #e0e0e0;
 }
 
-/* 脉冲动画 */
+/* Pulse animation */
 @keyframes pulse-marker {
   0%, 100% {
     box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.3), 0 2px 8px rgba(0,0,0,0.3);
@@ -227,7 +227,7 @@ watch(() => props.nearestService, (newService) => {
   }
 }
 
-/* MapBox控件样式调整 */
+/* MapBox control style adjustments */
 :deep(.mapboxgl-ctrl-group) {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
