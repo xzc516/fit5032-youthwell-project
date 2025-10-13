@@ -11,14 +11,14 @@
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <meta name="referrer" content="strict-origin-when-cross-origin">
 
-    <!-- Content Security Policy - Updated to support MapBox, Gemini API, SendGrid -->
+    <!-- Content Security Policy - Updated to support MapBox, Gemini API, SendGrid, and Vite HMR -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
       style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://api.mapbox.com;
       font-src 'self' 'unsafe-inline' data: https://cdnjs.cloudflare.com;
       img-src 'self' data: https: blob:;
-      connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://cdn.jsdelivr.net https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com https://api.sendgrid.com;
+      connect-src 'self' ws://localhost:* http://localhost:* https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://cdn.jsdelivr.net https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com https://api.sendgrid.com;
       worker-src 'self' blob:;
       base-uri 'self';
       form-action 'self';

@@ -182,6 +182,7 @@ import { useForumStore } from '../stores/forum'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import DataTable from '../components/DataTable.vue'
+import { generateMockUsers, generateMockPosts } from '../utils/mockDataGenerator'
 
 const auth = useFirebaseAuthStore()
 const forumStore = useForumStore()
@@ -190,6 +191,10 @@ const router = useRouter()
 const message = ref('')
 const error = ref('')
 const allUsers = ref([])
+
+// Generate mock data immediately
+const mockUsers = ref(generateMockUsers(50))
+const mockPosts = ref(generateMockPosts(30, mockUsers.value))
 
 // Load all users from Firestore
 async function loadUsers() {
@@ -207,17 +212,39 @@ async function loadUsers() {
 onMounted(async () => {
   await loadUsers()
   await forumStore.loadPosts()
+  console.log(`📊 Mock data loaded: ${mockUsers.value.length} users, ${mockPosts.value.length} posts`)
 })
 
-// Statistics
-const statistics = computed(() => ({
-  totalUsers: allUsers.value.length,
-  totalPosts: forumStore.posts.length,
-  adminUsers: allUsers.value.filter(u => u.role === 'admin').length,
-  avgRating: forumStore.posts.length > 0
-    ? (forumStore.posts.reduce((sum, post) => sum + forumStore.getAverageRating(post), 0) / forumStore.posts.length).toFixed(1)
-    : '0.0'
-}))
+// Statistics - include mock data
+const statistics = computed(() => {
+  const totalUsers = allUsers.value.length + mockUsers.value.length
+  const totalPosts = forumStore.posts.length + mockPosts.value.length
+  const totalAdmins = allUsers.value.filter(u => u.role === 'admin').length +
+                      mockUsers.value.filter(u => u.role === 'admin').length
+
+  // Calculate average rating from both real and mock posts
+  let totalRating = 0
+  let postCount = 0
+
+  forumStore.posts.forEach(post => {
+    totalRating += forumStore.getAverageRating(post)
+    postCount++
+  })
+
+  mockPosts.value.forEach(post => {
+    totalRating += post.avgRating
+    postCount++
+  })
+
+  const avgRating = postCount > 0 ? (totalRating / postCount).toFixed(1) : '0.0'
+
+  return {
+    totalUsers,
+    totalPosts,
+    adminUsers: totalAdmins,
+    avgRating
+  }
+})
 
 // User table columns
 const userColumns = [
@@ -260,21 +287,23 @@ const postColumns = [
   }
 ]
 
-// Users table data
+// Users table data - combine real and mock data
 const usersTableData = computed(() => {
-  return allUsers.value.map(user => ({
+  const realUsers = allUsers.value.map(user => ({
     ...user,
     createdAt: user.createdAt || { seconds: Date.now() / 1000 }
   }))
+  return [...realUsers, ...mockUsers.value]
 })
 
-// Posts table data
+// Posts table data - combine real and mock data
 const postsTableData = computed(() => {
-  return forumStore.posts.map(post => ({
+  const realPosts = forumStore.posts.map(post => ({
     ...post,
     avgRating: forumStore.getAverageRating(post).toFixed(1),
     ratingCount: forumStore.getRatingCount(post)
   }))
+  return [...realPosts, ...mockPosts.value]
 })
 
 // User management functions
@@ -308,7 +337,8 @@ async function deleteUser(user) {
 }
 
 // Post management functions
-function viewPost(post) {
+function viewPost() {
+  // Navigate to forum page
   router.push('/forum')
 }
 
@@ -375,6 +405,7 @@ function downloadCSV(content, filename) {
     document.body.removeChild(link)
   }
 }
+
 </script>
 
 <style scoped>

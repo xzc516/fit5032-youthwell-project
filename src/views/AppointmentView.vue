@@ -38,24 +38,28 @@
               <form @submit.prevent="bookAppointment">
                 <div class="mb-3">
                   <label class="form-label">Service Type</label>
-                  <select v-model="bookingForm.serviceType" class="form-select" required>
-                    <option value="">Select service...</option>
-                    <option value="counseling">Individual Counseling</option>
-                    <option value="group">Group Therapy</option>
-                    <option value="crisis">Crisis Intervention</option>
-                    <option value="assessment">Mental Health Assessment</option>
-                  </select>
-                </div>
-
-                <div class="mb-3">
-                  <label class="form-label">Counselor</label>
-                  <select v-model="bookingForm.counselor" class="form-select" required>
-                    <option value="">Select counselor...</option>
-                    <option value="Dr. Sarah Johnson">Dr. Sarah Johnson</option>
-                    <option value="Dr. Michael Chen">Dr. Michael Chen</option>
-                    <option value="Dr. Emily Williams">Dr. Emily Williams</option>
-                    <option value="Dr. James Brown">Dr. James Brown</option>
-                  </select>
+                  <input
+                    type="text"
+                    v-model="bookingForm.serviceType"
+                    class="form-control"
+                    placeholder="e.g., Individual Counseling, Group Therapy, Crisis Intervention..."
+                    required
+                    list="serviceTypeSuggestions"
+                  />
+                  <datalist id="serviceTypeSuggestions">
+                    <option value="Individual Counseling">
+                    <option value="Group Therapy">
+                    <option value="Crisis Intervention">
+                    <option value="Mental Health Assessment">
+                    <option value="Family Counseling">
+                    <option value="Cognitive Behavioral Therapy">
+                    <option value="Mindfulness Session">
+                    <option value="Anxiety Management">
+                    <option value="Depression Support">
+                  </datalist>
+                  <small class="form-text text-muted">
+                    Enter the type of service you need or select from suggestions
+                  </small>
                 </div>
 
                 <div class="mb-3">
@@ -130,10 +134,6 @@
                       <small class="text-muted">
                         <i class="bi bi-calendar3 me-1"></i>{{ formatAppointmentDate(apt.start) }}
                       </small>
-                      <br>
-                      <small class="text-muted">
-                        <i class="bi bi-person me-1"></i>{{ apt.counselor }}
-                      </small>
                     </div>
                     <button
                       @click="cancelAppointment(apt.id)"
@@ -177,7 +177,6 @@ const auth = useFirebaseAuthStore()
 // Booking form
 const bookingForm = ref({
   serviceType: '',
-  counselor: '',
   date: '',
   time: '',
   duration: '60',
@@ -285,7 +284,6 @@ async function bookAppointment() {
       userId: auth.currentUser?.uid,
       username: auth.currentUser?.username,
       serviceType: bookingForm.value.serviceType,
-      counselor: bookingForm.value.counselor,
       start: startDateTime.toISOString(),
       end: endDateTime.toISOString(),
       duration: bookingForm.value.duration,
@@ -299,10 +297,9 @@ async function bookAppointment() {
     // Add to calendar
     const newEvent = {
       id: docRef.id,
-      title: `${bookingForm.value.serviceType} - ${bookingForm.value.counselor}`,
+      title: bookingForm.value.serviceType,
       start: startDateTime.toISOString(),
       end: endDateTime.toISOString(),
-      counselor: bookingForm.value.counselor,
       color: getServiceColor(bookingForm.value.serviceType)
     }
 
@@ -312,7 +309,6 @@ async function bookAppointment() {
     // Reset form
     bookingForm.value = {
       serviceType: '',
-      counselor: '',
       date: '',
       time: '',
       duration: '60',
@@ -366,13 +362,18 @@ function handleEventClick(clickInfo) {
  * Get color based on service type
  */
 function getServiceColor(serviceType) {
-  const colors = {
-    counseling: '#0d6efd',
-    group: '#198754',
-    crisis: '#dc3545',
-    assessment: '#ffc107'
-  }
-  return colors[serviceType] || '#6c757d'
+  const type = serviceType.toLowerCase()
+
+  if (type.includes('counseling') || type.includes('individual')) return '#0d6efd'
+  if (type.includes('group') || type.includes('therapy')) return '#198754'
+  if (type.includes('crisis') || type.includes('emergency')) return '#dc3545'
+  if (type.includes('assessment') || type.includes('evaluation')) return '#ffc107'
+  if (type.includes('cognitive') || type.includes('cbt')) return '#6610f2'
+  if (type.includes('mindfulness') || type.includes('meditation')) return '#20c997'
+  if (type.includes('anxiety')) return '#fd7e14'
+  if (type.includes('depression')) return '#0dcaf0'
+
+  return '#6c757d' // Default gray color
 }
 
 /**
@@ -417,10 +418,9 @@ async function loadAppointments() {
       const data = doc.data()
       return {
         id: doc.id,
-        title: `${data.serviceType} - ${data.counselor}`,
+        title: data.serviceType,
         start: data.start,
         end: data.end,
-        counselor: data.counselor,
         color: getServiceColor(data.serviceType)
       }
     })
