@@ -409,8 +409,21 @@ async function loadDashboardData() {
       userPosts.value = []
     }
 
-    // Load saved resources (if implemented)
-    savedResources.value = []
+    // Load saved resources
+    try {
+      const savedResourcesQuery = query(
+        collection(db, 'savedResources'),
+        where('userId', '==', auth.currentUser.uid)
+      )
+      const savedResourcesSnapshot = await getDocs(savedResourcesQuery)
+      savedResources.value = savedResourcesSnapshot.docs.map(doc => ({
+        firestoreId: doc.id, // Store Firestore document ID for deletion
+        ...doc.data()
+      }))
+    } catch (savedResourcesError) {
+      console.error('Could not load saved resources:', savedResourcesError)
+      savedResources.value = []
+    }
 
   } catch (err) {
     console.error('Error loading dashboard data:', err)

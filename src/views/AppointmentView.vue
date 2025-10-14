@@ -6,9 +6,7 @@
         <h1 class="display-5 fw-bold">
           <i class="bi bi-calendar-check me-2"></i>Smart Appointment System
         </h1>
-        <p class="text-muted">
-          Schedule counseling sessions with automatic conflict detection
-        </p>
+        <p class="text-muted">Schedule counseling sessions with automatic conflict detection</p>
       </div>
 
       <div class="row">
@@ -16,9 +14,7 @@
         <div class="col-lg-8 mb-4">
           <div class="card shadow">
             <div class="card-header bg-primary text-white">
-              <h5 class="mb-0">
-                <i class="bi bi-calendar3 me-2"></i>Appointment Calendar
-              </h5>
+              <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Appointment Calendar</h5>
             </div>
             <div class="card-body p-3">
               <FullCalendar :options="calendarOptions" />
@@ -30,9 +26,7 @@
         <div class="col-lg-4">
           <div class="card shadow mb-4">
             <div class="card-header bg-success text-white">
-              <h5 class="mb-0">
-                <i class="bi bi-plus-circle me-2"></i>Book Appointment
-              </h5>
+              <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Book Appointment</h5>
             </div>
             <div class="card-body">
               <form @submit.prevent="bookAppointment">
@@ -47,16 +41,17 @@
                     list="serviceTypeSuggestions"
                   />
                   <datalist id="serviceTypeSuggestions">
-                    <option value="Individual Counseling">
-                    <option value="Group Therapy">
-                    <option value="Crisis Intervention">
-                    <option value="Mental Health Assessment">
-                    <option value="Family Counseling">
-                    <option value="Cognitive Behavioral Therapy">
-                    <option value="Mindfulness Session">
-                    <option value="Anxiety Management">
-                    <option value="Depression Support">
+                    <option value="Individual Counseling"></option>
+                    <option value="Group Therapy"></option>
+                    <option value="Crisis Intervention"></option>
+                    <option value="Mental Health Assessment"></option>
+                    <option value="Family Counseling"></option>
+                    <option value="Cognitive Behavioral Therapy"></option>
+                    <option value="Mindfulness Session"></option>
+                    <option value="Anxiety Management"></option>
+                    <option value="Depression Support"></option>
                   </datalist>
+
                   <small class="form-text text-muted">
                     Enter the type of service you need or select from suggestions
                   </small>
@@ -113,9 +108,7 @@
           <!-- Upcoming Appointments -->
           <div class="card shadow">
             <div class="card-header bg-info text-white">
-              <h5 class="mb-0">
-                <i class="bi bi-clock-history me-2"></i>Upcoming Appointments
-              </h5>
+              <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Upcoming Appointments</h5>
             </div>
             <div class="card-body">
               <div v-if="upcomingAppointments.length === 0" class="text-center text-muted py-3">
@@ -149,16 +142,14 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Success/Error Toast -->
-    <div
-      v-if="toast.show"
-      class="toast-notification"
-      :class="toast.type"
-    >
-      <i :class="toast.type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'" class="me-2"></i>
-      {{ toast.message }}
-    </div>
+  <!-- Success/Error Toast -->
+  <div v-if="toast.show" class="toast-notification" :class="toast.type">
+    <i
+      :class="`${toast.type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'} me-2`"
+    ></i>
+    {{ toast.message }}
   </div>
 </template>
 
@@ -170,7 +161,16 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { useFirebaseAuthStore } from '../stores/firebaseAuth'
 import { db } from '../firebase/config'
-import { collection, addDoc, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore'
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+  doc,
+  orderBy,
+} from 'firebase/firestore'
 
 const auth = useFirebaseAuthStore()
 
@@ -180,7 +180,7 @@ const bookingForm = ref({
   date: '',
   time: '',
   duration: '60',
-  notes: ''
+  notes: '',
 })
 
 // Calendar events
@@ -191,14 +191,28 @@ const isBooking = ref(false)
 const toast = ref({
   show: false,
   type: 'success',
-  message: ''
+  message: '',
 })
 
 // Time slots (9 AM to 5 PM)
 const timeSlots = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-  '15:00', '15:30', '16:00', '16:30', '17:00'
+  '09:00',
+  '09:30',
+  '10:00',
+  '10:30',
+  '11:00',
+  '11:30',
+  '12:00',
+  '12:30',
+  '13:00',
+  '13:30',
+  '14:00',
+  '14:30',
+  '15:00',
+  '15:30',
+  '16:00',
+  '16:30',
+  '17:00',
 ]
 
 // Minimum date (today)
@@ -212,7 +226,7 @@ const upcomingAppointments = computed(() => {
   const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
   return events.value
-    .filter(event => {
+    .filter((event) => {
       const eventDate = new Date(event.start)
       return eventDate >= now && eventDate <= nextWeek
     })
@@ -227,14 +241,14 @@ const calendarOptions = ref({
   headerToolbar: {
     left: 'prev,next today',
     center: 'title',
-    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    right: 'dayGridMonth,timeGridWeek,timeGridDay',
   },
   slotMinTime: '09:00:00',
   slotMaxTime: '18:00:00',
   businessHours: {
     daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
     startTime: '09:00',
-    endTime: '17:00'
+    endTime: '17:00',
   },
   events: events.value,
   eventClick: handleEventClick,
@@ -243,7 +257,7 @@ const calendarOptions = ref({
   dayMaxEvents: true,
   weekends: true,
   editable: false,
-  eventColor: '#0d6efd'
+  eventColor: '#0d6efd',
 })
 
 /**
@@ -260,7 +274,7 @@ async function bookAppointment() {
   const endDateTime = new Date(startDateTime.getTime() + bookingForm.value.duration * 60000)
 
   // Check for conflicts
-  const hasConflict = events.value.some(event => {
+  const hasConflict = events.value.some((event) => {
     const eventStart = new Date(event.start)
     const eventEnd = new Date(event.end)
 
@@ -289,7 +303,7 @@ async function bookAppointment() {
       duration: bookingForm.value.duration,
       notes: bookingForm.value.notes,
       status: 'confirmed',
-      createdAt: new Date()
+      createdAt: new Date(),
     }
 
     const docRef = await addDoc(collection(db, 'appointments'), appointmentData)
@@ -300,7 +314,7 @@ async function bookAppointment() {
       title: bookingForm.value.serviceType,
       start: startDateTime.toISOString(),
       end: endDateTime.toISOString(),
-      color: getServiceColor(bookingForm.value.serviceType)
+      color: getServiceColor(bookingForm.value.serviceType),
     }
 
     events.value.push(newEvent)
@@ -312,11 +326,10 @@ async function bookAppointment() {
       date: '',
       time: '',
       duration: '60',
-      notes: ''
+      notes: '',
     }
 
     showToast('success', '✅ Appointment booked successfully!')
-
   } catch (error) {
     console.error('Error booking appointment:', error)
     showToast('error', 'Failed to book appointment. Please try again.')
@@ -338,11 +351,10 @@ async function cancelAppointment(appointmentId) {
     await deleteDoc(doc(db, 'appointments', appointmentId))
 
     // Remove from calendar
-    events.value = events.value.filter(event => event.id !== appointmentId)
+    events.value = events.value.filter((event) => event.id !== appointmentId)
     calendarOptions.value.events = [...events.value]
 
     showToast('success', 'Appointment cancelled successfully')
-
   } catch (error) {
     console.error('Error cancelling appointment:', error)
     showToast('error', 'Failed to cancel appointment')
@@ -387,7 +399,7 @@ function formatAppointmentDate(dateString) {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
@@ -409,24 +421,23 @@ async function loadAppointments() {
     const q = query(
       collection(db, 'appointments'),
       where('userId', '==', auth.currentUser?.uid),
-      orderBy('start', 'asc')
+      orderBy('start', 'asc'),
     )
 
     const querySnapshot = await getDocs(q)
 
-    events.value = querySnapshot.docs.map(doc => {
+    events.value = querySnapshot.docs.map((doc) => {
       const data = doc.data()
       return {
         id: doc.id,
         title: data.serviceType,
         start: data.start,
         end: data.end,
-        color: getServiceColor(data.serviceType)
+        color: getServiceColor(data.serviceType),
       }
     })
 
     calendarOptions.value.events = [...events.value]
-
   } catch (error) {
     console.error('Error loading appointments:', error)
   }

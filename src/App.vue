@@ -66,6 +66,11 @@
                 <i class="bi bi-shield-fill me-1"></i>Admin
               </a>
             </li>
+            <li class="nav-item" v-if="auth.isAdmin">
+              <a class="nav-link" href="#" @click.prevent="$router.push('/tables')" :class="{ active: $route.path === '/tables' }">
+                <i class="bi bi-table me-1"></i>Data Tables
+              </a>
+            </li>
             <li class="nav-item" v-if="auth.isAuthenticated">
               <span class="navbar-text ms-2 me-2">
                 <i class="bi bi-person-circle me-1"></i>{{ auth.currentUser?.username }}

@@ -74,6 +74,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['user', 'admin'] }
     },
     {
+      path: '/tables',
+      name: 'tables',
+      component: () => import('../views/DataTablesDemo.vue'),
+      meta: { requiresAuth: true, roles: ['admin'] }
+    },
+    {
       path: '/login',
       name: 'login',
       component: LoginView

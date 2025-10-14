@@ -63,13 +63,24 @@
               </div>
             </div>
             <div class="card-footer bg-transparent border-0">
-              <button
-                @click="openResource(resource)"
-                class="btn w-100"
-                :class="'btn-' + resource.color">
-                <i :class="'bi bi-' + (resource.type === 'download' ? 'download' : 'box-arrow-up-right') + ' me-2'"></i>
-                {{ resource.type === 'download' ? 'Download' : 'View Resource' }}
-              </button>
+              <div class="d-grid gap-2">
+                <button
+                  @click="openResource(resource)"
+                  class="btn"
+                  :class="'btn-' + resource.color">
+                  <i :class="'bi bi-' + (resource.type === 'download' ? 'download' : 'box-arrow-up-right') + ' me-2'"></i>
+                  {{ resource.type === 'download' ? 'Download' : 'View Resource' }}
+                </button>
+                <button
+                  v-if="auth.isAuthenticated"
+                  @click="saveResource(resource)"
+                  class="btn btn-outline-warning btn-sm"
+                  :disabled="isResourceSaved(resource.id)">
+                  <i class="bi bi-bookmark-fill me-1" v-if="isResourceSaved(resource.id)"></i>
+                  <i class="bi bi-bookmark me-1" v-else></i>
+                  {{ isResourceSaved(resource.id) ? 'Saved' : 'Save for Later' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -86,10 +97,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useFirebaseAuthStore } from '../stores/firebaseAuth'
+import { db } from '../firebase/config'
+import { collection, addDoc, deleteDoc, doc, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
 
+const auth = useFirebaseAuthStore()
 const searchQuery = ref('')
 const selectedCategory = ref('all')
+const savedResourceIds = ref([])
 
 const resources = [
   // Mental Health Basics
@@ -355,6 +371,72 @@ const filteredResources = computed(() => {
 
   return filtered
 })
+
+// Load saved resources on mount
+onMounted(async () => {
+  if (auth.isAuthenticated && auth.currentUser?.uid) {
+    await loadSavedResources()
+  }
+})
+
+// Load user's saved resources from Firestore
+async function loadSavedResources() {
+  try {
+    const q = query(
+      collection(db, 'savedResources'),
+      where('userId', '==', auth.currentUser.uid)
+    )
+    const snapshot = await getDocs(q)
+    savedResourceIds.value = snapshot.docs.map(doc => doc.data().resourceId)
+  } catch (error) {
+    console.error('Error loading saved resources:', error)
+  }
+}
+
+// Check if resource is already saved
+function isResourceSaved(resourceId) {
+  return savedResourceIds.value.includes(resourceId)
+}
+
+// Save resource to Firestore
+async function saveResource(resource) {
+  if (!auth.isAuthenticated) {
+    alert('Please login to save resources')
+    return
+  }
+
+  try {
+    // Check if already saved
+    if (isResourceSaved(resource.id)) {
+      alert('This resource is already saved!')
+      return
+    }
+
+    // Save to Firestore
+    await addDoc(collection(db, 'savedResources'), {
+      userId: auth.currentUser.uid,
+      resourceId: resource.id,
+      title: resource.title,
+      category: resource.category,
+      categoryKey: resource.categoryKey,
+      description: resource.description,
+      icon: resource.icon,
+      color: resource.color,
+      type: resource.type,
+      url: resource.url || null,
+      tags: resource.tags,
+      savedAt: serverTimestamp()
+    })
+
+    // Add to local array
+    savedResourceIds.value.push(resource.id)
+
+    alert('Resource saved successfully!')
+  } catch (error) {
+    console.error('Error saving resource:', error)
+    alert('Failed to save resource. Please try again.')
+  }
+}
 
 function openResource(resource) {
   if (resource.type === 'download') {

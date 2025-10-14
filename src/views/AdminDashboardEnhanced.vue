@@ -5,9 +5,35 @@
         <h1 class="text-center mb-4 text-white">
           <i class="fas fa-tachometer-alt me-2"></i>Enhanced Admin Dashboard
         </h1>
-        <p class="text-center text-white-50 mb-5">
+        <p class="text-center text-white-50 mb-3">
           Administrator control panel with bulk email and analytics
         </p>
+        
+        <!-- Data Management Controls -->
+        <div class="text-center mb-4">
+          <div class="btn-group" role="group">
+            <button 
+              @click="$router.push('/tables')" 
+              class="btn btn-outline-light btn-lg"
+            >
+              <i class="fas fa-table me-2"></i>View Data Tables
+            </button>
+            <button 
+              @click="initializeSampleData" 
+              :disabled="dataInitLoading"
+              class="btn btn-outline-light btn-lg"
+            >
+              <i class="fas fa-database me-2"></i>
+              {{ dataInitLoading ? 'Initializing...' : 'Initialize Sample Data' }}
+            </button>
+          </div>
+          <div v-if="dataInitMessage" class="mt-3">
+            <div class="alert alert-info d-inline-block">
+              <i class="fas fa-info-circle me-2"></i>
+              {{ dataInitMessage }}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -337,6 +363,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import Chart from 'chart.js/auto'
 import { sendBulkEmail as sendEmailService } from '../services/emailService'
+import { initializeAllData } from '../services/databaseInit'
 
 const auth = useFirebaseAuthStore()
 const forumStore = useForumStore()
@@ -346,6 +373,10 @@ const error = ref('')
 const allUsers = ref([])
 const allAppointments = ref([])
 const isSending = ref(false)
+
+// Data initialization
+const dataInitLoading = ref(false)
+const dataInitMessage = ref('')
 
 // Charts
 const userGrowthChart = ref(null)
@@ -674,6 +705,33 @@ function formatDate(timestamp) {
   if (!timestamp) return 'N/A'
   const date = timestamp.seconds ? new Date(timestamp.seconds * 1000) : new Date(timestamp)
   return date.toLocaleDateString()
+}
+
+// Initialize sample data
+async function initializeSampleData() {
+  try {
+    dataInitLoading.value = true
+    dataInitMessage.value = 'Initializing sample data...'
+    
+    const result = await initializeAllData()
+    
+    if (result.success) {
+      dataInitMessage.value = 'Sample data initialized successfully! You can now view the data tables.'
+      message.value = 'Sample data initialized successfully!'
+      setTimeout(() => { message.value = '' }, 5000)
+    } else {
+      dataInitMessage.value = 'Error initializing data: ' + result.message
+      error.value = 'Failed to initialize sample data'
+      setTimeout(() => { error.value = '' }, 5000)
+    }
+  } catch (error) {
+    console.error('Error initializing sample data:', error)
+    dataInitMessage.value = 'Error initializing data: ' + error.message
+    error.value = 'Failed to initialize sample data'
+    setTimeout(() => { error.value = '' }, 5000)
+  } finally {
+    dataInitLoading.value = false
+  }
 }
 
 onMounted(() => {
