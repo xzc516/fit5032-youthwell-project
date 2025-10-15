@@ -1,7 +1,7 @@
 <template>
   <div class="data-table-container">
     <!-- Search Bar -->
-    <div class="row mb-3">
+    <div class="row mb-3" v-if="searchable">
       <div class="col-12 col-md-6">
         <label class="form-label fw-bold">Search:</label>
         <input
@@ -20,7 +20,7 @@
     </div>
 
     <!-- Column-specific Search -->
-    <div class="row mb-3" v-if="enableColumnSearch">
+    <div class="row mb-3" v-if="enableColumnSearch && searchable">
       <div v-for="column in columns" :key="column.key" :class="columnClass">
         <label class="form-label small">{{ column.label }}</label>
         <input
@@ -41,15 +41,15 @@
             <th
               v-for="column in columns"
               :key="column.key"
-              @click="sortBy(column.key)"
-              :class="{ 'sortable': column.sortable !== false }"
+              @click="sortable && column.sortable !== false ? sortBy(column.key) : null"
+              :class="{ 'sortable': sortable && column.sortable !== false }"
               role="columnheader"
               :aria-sort="getSortAriaLabel(column.key)"
               tabindex="0"
-              @keypress.enter="sortBy(column.key)"
+              @keypress.enter="sortable && column.sortable !== false ? sortBy(column.key) : null"
             >
               {{ column.label }}
-              <span v-if="column.sortable !== false" class="sort-icon">
+              <span v-if="sortable && column.sortable !== false" class="sort-icon">
                 <i v-if="sortColumn === column.key && sortDirection === 'asc'" class="fas fa-sort-up"></i>
                 <i v-else-if="sortColumn === column.key && sortDirection === 'desc'" class="fas fa-sort-down"></i>
                 <i v-else class="fas fa-sort text-muted"></i>
@@ -182,6 +182,22 @@ const props = defineProps({
   defaultItemsPerPage: {
     type: Number,
     default: 10
+  },
+  itemsPerPage: {
+    type: Number,
+    default: null
+  },
+  searchable: {
+    type: Boolean,
+    default: true
+  },
+  sortable: {
+    type: Boolean,
+    default: true
+  },
+  exportable: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -190,7 +206,7 @@ const columnSearches = ref({})
 const sortColumn = ref('')
 const sortDirection = ref('asc')
 const currentPage = ref(1)
-const itemsPerPage = ref(props.defaultItemsPerPage)
+const itemsPerPage = ref(props.itemsPerPage || props.defaultItemsPerPage)
 
 // Initialize column searches
 props.columns.forEach(col => {
@@ -282,6 +298,8 @@ const visiblePages = computed(() => {
 
 // Sort function
 function sortBy(column) {
+  if (!props.sortable) return
+  
   const col = props.columns.find(c => c.key === column)
   if (col && col.sortable === false) return
 
