@@ -172,7 +172,8 @@ exports.sendBulkEmail = functions.https.onRequest((req, res) => {
           'X-Postmark-Server-Token': postmarkKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ Messages: messages })
+        // Postmark expects a raw JSON array for /email/batch
+        body: JSON.stringify(messages)
       })
 
       if (!response.ok) {
