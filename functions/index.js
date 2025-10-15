@@ -117,3 +117,113 @@ exports.getForumPostCategories = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+/**
+ * HTTP Cloud Function: Mental Health Crisis Detection
+ * Detects potential mental health crises and provides immediate support
+ */
+exports.detectMentalHealthCrisis = functions.https.onRequest((req, res) => {
+  return cors(req, res, async () => {
+    try {
+      const { userId, assessmentScore, userBehavior, chatHistory } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Missing userId parameter' 
+        });
+      }
+      
+      console.log('Running mental health crisis detection for user:', userId);
+      
+      // Crisis detection algorithm
+      const crisisIndicators = {
+        highRiskScore: assessmentScore > 20,
+        suicidalKeywords: detectSuicidalKeywords(chatHistory),
+        selfHarmIndicators: userBehavior?.selfHarmRisk === 'high',
+        socialIsolation: userBehavior?.socialEngagement < 0.3,
+        sleepDisruption: userBehavior?.sleepQuality < 0.4,
+        substanceUse: userBehavior?.substanceUse === 'increased'
+      };
+      
+      const crisisLevel = calculateCrisisLevel(crisisIndicators);
+      
+      const crisisResponse = {
+        userId: userId,
+        crisisLevel: crisisLevel,
+        indicators: crisisIndicators,
+        urgency: crisisLevel === 'critical' ? 'immediate' : 'monitor',
+        recommendedActions: generateCrisisActions(crisisLevel),
+        emergencyContacts: {
+          lifeline: '13 11 14',
+          kidsHelpline: '1800 55 1800',
+          beyondBlue: '1300 22 4636',
+          emergency: '000'
+        },
+        followUpRequired: crisisLevel !== 'low',
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      console.log('Mental health crisis detection completed:', crisisResponse);
+      res.status(200).json({ success: true, data: crisisResponse });
+      
+    } catch (error) {
+      console.error('Error in mental health crisis detection:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+});
+
+// Helper functions for crisis detection
+function detectSuicidalKeywords(chatHistory) {
+  if (!chatHistory) return false;
+  
+  const suicidalKeywords = [
+    'suicide', 'kill myself', 'end it all', 'not worth living',
+    'better off dead', 'want to die', 'self harm', 'hurt myself'
+  ];
+  
+  const text = chatHistory.toLowerCase();
+  return suicidalKeywords.some(keyword => text.includes(keyword));
+}
+
+function calculateCrisisLevel(indicators) {
+  const criticalCount = Object.values(indicators).filter(Boolean).length;
+  
+  if (criticalCount >= 3 || indicators.suicidalKeywords) return 'critical';
+  if (criticalCount >= 2) return 'high';
+  if (criticalCount >= 1) return 'medium';
+  return 'low';
+}
+
+function generateCrisisActions(crisisLevel) {
+  switch (crisisLevel) {
+    case 'critical':
+      return [
+        'Immediate professional intervention required',
+        'Contact emergency services if immediate danger',
+        'Stay with the person until help arrives',
+        'Remove any means of self-harm'
+      ];
+    case 'high':
+      return [
+        'Schedule immediate counseling session',
+        'Increase monitoring and check-ins',
+        'Provide crisis hotline numbers',
+        'Consider hospitalization if necessary'
+      ];
+    case 'medium':
+      return [
+        'Schedule counseling within 24-48 hours',
+        'Regular check-ins with mental health professional',
+        'Provide self-care resources',
+        'Monitor for escalation'
+      ];
+    default:
+      return [
+        'Continue regular mental health monitoring',
+        'Maintain current treatment plan',
+        'Regular follow-up assessments'
+      ];
+  }
+}

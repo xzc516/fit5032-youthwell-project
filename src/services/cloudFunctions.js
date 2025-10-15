@@ -142,6 +142,31 @@ export async function processAssessmentResults(userId) {
 }
 
 /**
+ * Detect mental health crisis and get support recommendations
+ */
+export async function detectMentalHealthCrisis(crisisData) {
+  try {
+    const response = await fetch(`${CLOUD_FUNCTIONS_BASE_URL}/detectMentalHealthCrisis`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(crisisData)
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error detecting mental health crisis:', error)
+    throw error
+  }
+}
+
+/**
  * Check if Cloud Functions are available
  */
 export async function checkCloudFunctionsHealth() {
@@ -163,6 +188,7 @@ export async function checkCloudFunctionsHealth() {
 export default {
   getUserGrowthTrend,
   getForumPostCategories,
+  detectMentalHealthCrisis,
   sendBulkEmail,
   exportDataToCSV,
   processAssessmentResults,
