@@ -161,7 +161,8 @@ export async function checkCloudFunctionsHealth() {
 }
 
 export default {
-  getUserStats,
+  getUserGrowthTrend,
+  getForumPostCategories,
   sendBulkEmail,
   exportDataToCSV,
   processAssessmentResults,
