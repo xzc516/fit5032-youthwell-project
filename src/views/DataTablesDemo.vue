@@ -69,7 +69,6 @@
               <DataTable
                 :data="users"
                 :columns="userColumns"
-                :items-per-page="10"
                 :searchable="true"
                 :sortable="true"
                 :exportable="true"
@@ -94,7 +93,6 @@
               <DataTable
                 :data="posts"
                 :columns="postColumns"
-                :items-per-page="10"
                 :searchable="true"
                 :sortable="true"
                 :exportable="true"
@@ -119,7 +117,6 @@
               <DataTable
                 :data="assessments"
                 :columns="assessmentColumns"
-                :items-per-page="10"
                 :searchable="true"
                 :sortable="true"
                 :exportable="true"
@@ -144,7 +141,6 @@
               <DataTable
                 :data="appointments"
                 :columns="appointmentColumns"
-                :items-per-page="10"
                 :searchable="true"
                 :sortable="true"
                 :exportable="true"
@@ -169,7 +165,6 @@
               <DataTable
                 :data="services"
                 :columns="serviceColumns"
-                :items-per-page="10"
                 :searchable="true"
                 :sortable="true"
                 :exportable="true"

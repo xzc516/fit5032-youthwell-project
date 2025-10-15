@@ -82,17 +82,7 @@
     <div class="row align-items-center">
       <div class="col-12 col-md-6">
         <div class="d-flex align-items-center">
-          <label class="me-2">Rows per page:</label>
-          <select
-            v-model.number="itemsPerPage"
-            class="form-select form-select-sm w-auto"
-            aria-label="Rows per page"
-          >
-            <option :value="5">5</option>
-            <option :value="10">10</option>
-            <option :value="25">25</option>
-            <option :value="50">50</option>
-          </select>
+          <span class="text-muted">Showing {{ paginatedData.length }} of {{ filteredData.length }} entries (10 per page)</span>
         </div>
       </div>
       <div class="col-12 col-md-6">
@@ -206,7 +196,7 @@ const columnSearches = ref({})
 const sortColumn = ref('')
 const sortDirection = ref('asc')
 const currentPage = ref(1)
-const itemsPerPage = ref(props.itemsPerPage || props.defaultItemsPerPage)
+const itemsPerPage = ref(10) // Fixed at 10 rows per page
 
 // Initialize column searches
 props.columns.forEach(col => {
@@ -329,10 +319,7 @@ watch([globalSearch, columnSearches], () => {
   currentPage.value = 1
 }, { deep: true })
 
-// Reset to page 1 when items per page changes
-watch(itemsPerPage, () => {
-  currentPage.value = 1
-})
+// Note: itemsPerPage is now fixed at 10, so no need to watch for changes
 </script>
 
 <style scoped>
