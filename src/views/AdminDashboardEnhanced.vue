@@ -364,6 +364,7 @@ import { db } from '../firebase/config'
 import Chart from 'chart.js/auto'
 import { sendBulkEmail as sendEmailService } from '../services/emailService'
 import { initializeAllData } from '../services/databaseInit'
+import { getUserStats, sendBulkEmail as sendBulkEmailCF, exportDataToCSV, checkCloudFunctionsHealth } from '../services/cloudFunctions'
 
 const auth = useFirebaseAuthStore()
 const forumStore = useForumStore()
@@ -563,13 +564,29 @@ async function sendBulkEmail() {
   isSending.value = true
 
   try {
-    await sendEmailService({
-      to: recipients,
-      subject: emailForm.value.subject,
-      message: emailForm.value.message
-    })
-
-    message.value = `Email sent successfully to ${recipients.length} user(s)`
+    // Try Cloud Functions first, fallback to direct service
+    try {
+      const result = await sendBulkEmailCF({
+        recipients: emailForm.value.recipients,
+        subject: emailForm.value.subject,
+        message: emailForm.value.message,
+        template: emailForm.value.template
+      })
+      
+      if (result.success) {
+        message.value = `Email sent successfully to ${result.details.successful} user(s) via Cloud Functions`
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (cloudError) {
+      console.log('Cloud Functions failed, using direct service:', cloudError)
+      await sendEmailService({
+        to: recipients,
+        subject: emailForm.value.subject,
+        message: emailForm.value.message
+      })
+      message.value = `Email sent successfully to ${recipients.length} user(s) via direct service`
+    }
 
     // Reset form
     emailForm.value = {

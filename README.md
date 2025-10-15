@@ -242,8 +242,8 @@ fit5032-youthwell-project/
    ```
 
 2. **Install dependencies**
-   ```bash
-   npm install
+```bash
+npm install
    ```
 
 3. **Configure Firebase**
@@ -265,8 +265,8 @@ fit5032-youthwell-project/
 
 6. **Start development server**
    ```bash
-   npm run dev
-   ```
+npm run dev
+```
 
 7. **Open browser**
    - Visit `http://localhost:5173`
