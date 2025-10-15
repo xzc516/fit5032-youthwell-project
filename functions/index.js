@@ -140,41 +140,44 @@ exports.sendBulkEmail = functions.https.onRequest((req, res) => {
         return res.status(400).json({ success: false, error: 'subject and message required' })
       }
 
-      const sendgridKey = (process.env.SENDGRID_API_KEY) || (functions.config().sendgrid && functions.config().sendgrid.key)
+      // Postmark configuration (preferred: functions config, fallback to env)
+      const postmarkKey = (process.env.POSTMARK_API_KEY) || (functions.config().postmark && functions.config().postmark.key)
       const senderEmail = (functions.config().email && functions.config().email.from) || 'noreply@youthwell.app'
-      if (!sendgridKey) {
-        return res.status(500).json({ success: false, error: 'SendGrid API key not configured' })
+      if (!postmarkKey) {
+        return res.status(500).json({ success: false, error: 'Postmark API key not configured' })
       }
 
-      const payload = {
-        personalizations: recipients.map(email => ({ to: [{ email }], subject })),
-        from: { email: senderEmail, name: 'YouthWell' },
-        content: [
-          { type: 'text/plain', value: message },
-          { type: 'text/html', value: html || message.replace(/\n/g, '<br>') },
-        ],
-      }
-      if (attachment && attachment.content && attachment.filename && attachment.type) {
-        payload.attachments = [{
-          content: attachment.content,
-          filename: attachment.filename,
-          type: attachment.type,
-          disposition: 'attachment'
-        }]
-      }
+      // Use Postmark batch send API
+      const messages = recipients.map(to => {
+        const msg = {
+          From: senderEmail,
+          To: to,
+          Subject: subject,
+          TextBody: message,
+          HtmlBody: html || message.replace(/\n/g, '<br>')
+        }
+        if (attachment && attachment.content && attachment.filename && attachment.type) {
+          msg.Attachments = [{
+            Content: attachment.content,
+            Name: attachment.filename,
+            ContentType: attachment.type
+          }]
+        }
+        return msg
+      })
 
-      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      const response = await fetch('https://api.postmarkapp.com/email/batch', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${sendgridKey}`,
+          'X-Postmark-Server-Token': postmarkKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ Messages: messages })
       })
 
       if (!response.ok) {
         const errText = await response.text().catch(() => '')
-        throw new Error(`SendGrid error: ${response.status} ${errText}`)
+        throw new Error(`Postmark error: ${response.status} ${errText}`)
       }
 
       res.set('Access-Control-Allow-Origin', '*')

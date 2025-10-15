@@ -533,22 +533,21 @@ function applyTemplate() {
   }
 }
 
-// Send bulk email
+// Send bulk email (Cloud Function only)
 async function sendBulkEmail() {
   if (!canSendEmail.value) return
 
-  // Get recipient emails
   let recipients = []
-  if (emailForm.value.recipients === 'all') {
-    recipients = allUsers.value.map(u => u.email)
-  } else if (emailForm.value.recipients === 'users') {
-    recipients = allUsers.value.filter(u => u.role !== 'admin').map(u => u.email)
-  } else if (emailForm.value.recipients === 'admins') {
-    recipients = allUsers.value.filter(u => u.role === 'admin').map(u => u.email)
-  } else if (emailForm.value.recipients === 'selected') {
-    recipients = allUsers.value
-      .filter(u => emailForm.value.selectedUsers.includes(u.id))
-      .map(u => u.email)
+  const sel = emailForm.value.recipients
+  if (sel === 'all') {
+    recipients = allUsers.value.map(u => u.email).filter(Boolean)
+  } else if (sel === 'users') {
+    recipients = allUsers.value.filter(u => u.role !== 'admin').map(u => u.email).filter(Boolean)
+  } else if (sel === 'admins') {
+    recipients = allUsers.value.filter(u => u.role === 'admin').map(u => u.email).filter(Boolean)
+  } else if (sel === 'selected') {
+    const selectedIds = new Set(emailForm.value.selectedUsers || [])
+    recipients = allUsers.value.filter(u => selectedIds.has(u.id)).map(u => u.email).filter(Boolean)
   }
 
   if (recipients.length === 0) {
@@ -557,51 +556,25 @@ async function sendBulkEmail() {
     return
   }
 
-  if (!confirm(`Send email to ${recipients.length} user(s)?`)) {
-    return
-  }
+  if (!confirm(`Send email to ${recipients.length} user(s)?`)) return
 
   isSending.value = true
-
   try {
-    // Try Cloud Functions first, fallback to direct service
-    try {
-      const result = await sendBulkEmailCF({
-        recipients: emailForm.value.recipients,
-        subject: emailForm.value.subject,
-        message: emailForm.value.message,
-        template: emailForm.value.template
-      })
-      
-      if (result.success) {
-        message.value = `Email sent successfully to ${result.details.successful} user(s) via Cloud Functions`
-      } else {
-        throw new Error(result.error)
-      }
-    } catch (cloudError) {
-      console.log('Cloud Functions failed, using direct service:', cloudError)
-      await sendEmailService({
-        to: recipients,
-        subject: emailForm.value.subject,
-        message: emailForm.value.message
-      })
-      message.value = `Email sent successfully to ${recipients.length} user(s) via direct service`
-    }
+    const result = await sendBulkEmailCF({
+      recipients,
+      subject: emailForm.value.subject,
+      message: emailForm.value.message,
+      html: emailForm.value.message?.replace(/\n/g, '<br>') || ''
+    })
 
-    // Reset form
-    emailForm.value = {
-      recipients: 'all',
-      selectedUsers: [],
-      subject: '',
-      message: '',
-      template: ''
-    }
+    if (!result?.success) throw new Error(result?.error || 'Unknown error')
 
+    message.value = `Email sent successfully to ${result.sent ?? recipients.length} user(s)`
+    emailForm.value = { recipients: 'all', selectedUsers: [], subject: '', message: '', template: '' }
     setTimeout(() => { message.value = '' }, 5000)
-
   } catch (err) {
     console.error('Error sending bulk email:', err)
-    error.value = 'Failed to send email: ' + err.message
+    error.value = 'Failed to send email: ' + (err?.message || err)
     setTimeout(() => { error.value = '' }, 5000)
   } finally {
     isSending.value = false
