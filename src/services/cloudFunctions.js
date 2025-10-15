@@ -3,7 +3,7 @@
  * Handles communication with Firebase Cloud Functions for server-side operations
  */
 
-// Cloud Functions URLs (replace with your actual deployed URLs)
+// Cloud Functions URLs - Updated with actual deployed URLs
 const CLOUD_FUNCTIONS_BASE_URL = 'https://us-central1-fit5032-youthwell-project.cloudfunctions.net'
 
 /**
@@ -146,7 +146,7 @@ export async function processAssessmentResults(userId) {
  */
 export async function checkCloudFunctionsHealth() {
   try {
-    const response = await fetch(`${CLOUD_FUNCTIONS_BASE_URL}/getUserStats`, {
+    const response = await fetch(`${CLOUD_FUNCTIONS_BASE_URL}/getUserGrowthTrend`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ export async function checkCloudFunctionsHealth() {
 
     return response.ok
   } catch (error) {
-    console.error('Cloud Functions health check failed:', error)
+    console.warn('Cloud Functions health check failed:', error.message)
     return false
   }
 }

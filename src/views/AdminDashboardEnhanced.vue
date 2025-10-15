@@ -644,6 +644,9 @@ async function renderCharts() {
               }
             }
           })
+        } else if (growthResponse.fallback) {
+          console.log('Cloud Functions not available, using fallback data')
+          renderFallbackGrowthChart()
         }
       } catch (error) {
         console.log('Cloud Functions growth data failed, using fallback:', error)
