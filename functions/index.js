@@ -119,6 +119,75 @@ exports.getForumPostCategories = functions.https.onRequest((req, res) => {
 });
 
 /**
+ * HTTP Cloud Function: Send Bulk Email (Server-side via SendGrid API)
+ * Avoids CORS/CSP issues by sending from server instead of browser
+ */
+exports.sendBulkEmail = functions.https.onRequest((req, res) => {
+  return cors(req, res, async () => {
+    try {
+      if (req.method === 'OPTIONS') {
+        res.set('Access-Control-Allow-Origin', '*')
+        res.set('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        return res.status(204).send('')
+      }
+
+      const { recipients, subject, message, html, attachment } = req.body || {}
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ success: false, error: 'recipients array required' })
+      }
+      if (!subject || !message) {
+        return res.status(400).json({ success: false, error: 'subject and message required' })
+      }
+
+      const sendgridKey = (process.env.SENDGRID_API_KEY) || (functions.config().sendgrid && functions.config().sendgrid.key)
+      const senderEmail = (functions.config().email && functions.config().email.from) || 'noreply@youthwell.app'
+      if (!sendgridKey) {
+        return res.status(500).json({ success: false, error: 'SendGrid API key not configured' })
+      }
+
+      const payload = {
+        personalizations: recipients.map(email => ({ to: [{ email }], subject })),
+        from: { email: senderEmail, name: 'YouthWell' },
+        content: [
+          { type: 'text/plain', value: message },
+          { type: 'text/html', value: html || message.replace(/\n/g, '<br>') },
+        ],
+      }
+      if (attachment && attachment.content && attachment.filename && attachment.type) {
+        payload.attachments = [{
+          content: attachment.content,
+          filename: attachment.filename,
+          type: attachment.type,
+          disposition: 'attachment'
+        }]
+      }
+
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sendgridKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '')
+        throw new Error(`SendGrid error: ${response.status} ${errText}`)
+      }
+
+      res.set('Access-Control-Allow-Origin', '*')
+      return res.status(200).json({ success: true, sent: recipients.length })
+    } catch (error) {
+      console.error('sendBulkEmail error:', error)
+      res.set('Access-Control-Allow-Origin', '*')
+      return res.status(500).json({ success: false, error: error.message })
+    }
+  })
+})
+
+/**
  * HTTP Cloud Function: Mental Health Crisis Detection
  * Detects potential mental health crises and provides immediate support
  */
