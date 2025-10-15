@@ -7,11 +7,11 @@
 const CLOUD_FUNCTIONS_BASE_URL = 'https://us-central1-fit5032-youthwell-project.cloudfunctions.net'
 
 /**
- * Get comprehensive user statistics from Cloud Functions
+ * Get user growth trend from Cloud Functions
  */
-export async function getUserStats() {
+export async function getUserGrowthTrend() {
   try {
-    const response = await fetch(`${CLOUD_FUNCTIONS_BASE_URL}/getUserStats`, {
+    const response = await fetch(`${CLOUD_FUNCTIONS_BASE_URL}/getUserGrowthTrend`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -25,7 +25,31 @@ export async function getUserStats() {
     const data = await response.json()
     return data
   } catch (error) {
-    console.error('Error fetching user stats:', error)
+    console.error('Error fetching user growth trend:', error)
+    throw error
+  }
+}
+
+/**
+ * Get forum post categories from Cloud Functions
+ */
+export async function getForumPostCategories() {
+  try {
+    const response = await fetch(`${CLOUD_FUNCTIONS_BASE_URL}/getForumPostCategories`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching forum post categories:', error)
     throw error
   }
 }

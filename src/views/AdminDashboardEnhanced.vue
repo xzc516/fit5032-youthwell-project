@@ -364,7 +364,7 @@ import { db } from '../firebase/config'
 import Chart from 'chart.js/auto'
 import { sendBulkEmail as sendEmailService } from '../services/emailService'
 import { initializeAllData } from '../services/databaseInit'
-import { getUserStats, sendBulkEmail as sendBulkEmailCF, exportDataToCSV, checkCloudFunctionsHealth } from '../services/cloudFunctions'
+import { getUserGrowthTrend, getForumPostCategories, sendBulkEmail as sendBulkEmailCF, exportDataToCSV, checkCloudFunctionsHealth } from '../services/cloudFunctions'
 
 const auth = useFirebaseAuthStore()
 const forumStore = useForumStore()
@@ -608,9 +608,95 @@ async function sendBulkEmail() {
   }
 }
 
-// Render analytics charts
-function renderCharts() {
-  // User Growth Chart
+// Render analytics charts with Cloud Functions data
+async function renderCharts() {
+  try {
+    // Check if Cloud Functions are available
+    const cloudFunctionsAvailable = await checkCloudFunctionsHealth()
+    
+    if (cloudFunctionsAvailable) {
+      console.log('Using Cloud Functions for chart data...')
+      
+      // Get user growth trend from Cloud Functions
+      try {
+        const growthResponse = await getUserGrowthTrend()
+        if (growthResponse.success && userGrowthChart.value) {
+          const growthData = growthResponse.data
+          const ctx = userGrowthChart.value.getContext('2d')
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: ['Total Users', 'Last 30 Days', 'Last 7 Days'],
+              datasets: [{
+                label: 'User Growth',
+                data: [growthData.total, growthData.last30Days, growthData.last7Days],
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                tension: 0.4
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  display: true
+                }
+              }
+            }
+          })
+        }
+      } catch (error) {
+        console.log('Cloud Functions growth data failed, using fallback:', error)
+        renderFallbackGrowthChart()
+      }
+      
+      // Get forum categories from Cloud Functions
+      try {
+        const categoriesResponse = await getForumPostCategories()
+        if (categoriesResponse.success && categoryChart.value) {
+          const categoryData = categoriesResponse.data
+          const ctx = categoryChart.value.getContext('2d')
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: categoryData.categories.map(c => c.category),
+              datasets: [{
+                label: 'Posts',
+                data: categoryData.categories.map(c => c.count),
+                backgroundColor: [
+                  '#0d6efd', '#198754', '#ffc107', '#dc3545',
+                  '#6f42c1', '#fd7e14', '#20c997', '#6c757d'
+                ]
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  display: false
+                }
+              }
+            }
+          })
+        }
+      } catch (error) {
+        console.log('Cloud Functions categories data failed, using fallback:', error)
+        renderFallbackCategoryChart()
+      }
+    } else {
+      console.log('Cloud Functions not available, using fallback data...')
+      renderFallbackGrowthChart()
+      renderFallbackCategoryChart()
+    }
+  } catch (error) {
+    console.error('Error rendering charts:', error)
+    renderFallbackGrowthChart()
+    renderFallbackCategoryChart()
+  }
+}
+
+// Fallback growth chart
+function renderFallbackGrowthChart() {
   if (userGrowthChart.value) {
     const ctx = userGrowthChart.value.getContext('2d')
     new Chart(ctx, {
@@ -635,8 +721,10 @@ function renderCharts() {
       }
     })
   }
+}
 
-  // Category Distribution Chart
+// Fallback category chart
+function renderFallbackCategoryChart() {
   if (categoryChart.value) {
     const categoryCounts = {}
     forumStore.posts.forEach(post => {

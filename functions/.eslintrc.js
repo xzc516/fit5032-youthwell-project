@@ -1,27 +1,21 @@
 module.exports = {
   env: {
-    browser: true,
-    es6: true,
     node: true,
+    es6: true,
   },
   extends: [
     "eslint:recommended",
-    "google",
   ],
   rules: {
-    "no-restricted-globals": ["error", "name", "length"],
-    "prefer-arrow-callback": "error",
-    "quotes": ["error", "single", {"allowTemplateLiterals": true}],
-    "max-len": ["error", {"code": 120}],
+    "no-unused-vars": ["error", {"argsIgnorePattern": "^_"}],
+    "no-case-declarations": "off",
+    "max-len": "off",
+    "quotes": "off",
   },
-  overrides: [
-    {
-      files: ["**/*.spec.*"],
-      env: {
-        mocha: true,
-      },
-      rules: {},
-    },
-  ],
-  globals: {},
+  globals: {
+    "module": "readonly",
+    "require": "readonly", 
+    "exports": "readonly",
+    "process": "readonly",
+  },
 };
